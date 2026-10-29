@@ -1,0 +1,3 @@
+[submodule "6mm-tinymce"]
+	path = 6mm-tinymce
+	url = https://github.com/zhangjinteng/6mm-tinymce.git

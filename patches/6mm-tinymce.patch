@@ -1,0 +1,79 @@
+diff --git a/modules/alloy/src/main/ts/ephox/alloy/api/ui/FloatingToolbarButton.ts b/modules/alloy/src/main/ts/ephox/alloy/api/ui/FloatingToolbarButton.ts
+index f03162e918..021b9d4d07 100644
+--- a/modules/alloy/src/main/ts/ephox/alloy/api/ui/FloatingToolbarButton.ts
++++ b/modules/alloy/src/main/ts/ephox/alloy/api/ui/FloatingToolbarButton.ts
+@@ -83,7 +83,8 @@ const makeSandbox = (button: AlloyComponent, spec: FloatingToolbarButtonSpec, de
+   const onClose = () => {
+     // Toggle and focus the button
+     Toggling.off(button);
+-    if (!shouldSkipFocus.get().getOr(false)) {
++    // 上下文工具栏切换选中对象时，关闭分类面板不能抢回旧工具栏的焦点。
++    if (!shouldSkipFocus.get().getOr(false) && !button.element.dom.closest('.tox-pop')) {
+       Focusing.focus(button);
+     }
+     ariaControls.unlink(button.element);
+@@ -101,7 +102,9 @@ const makeSandbox = (button: AlloyComponent, spec: FloatingToolbarButtonSpec, de
+         Keying.config({
+           mode: 'special',
+           onEscape: (comp) => {
++            const returnFocus = !!button.element.dom.closest('.tox-pop');
+             Sandboxing.close(comp);
++            if (returnFocus) Focusing.focus(button);
+             return Optional.some<boolean>(true);
+           }
+         }),
+diff --git a/modules/tinymce/src/themes/silver/main/ts/ui/context/ContextToolbar.ts b/modules/tinymce/src/themes/silver/main/ts/ui/context/ContextToolbar.ts
+index 878d930aaf..b37e1fef5e 100644
+--- a/modules/tinymce/src/themes/silver/main/ts/ui/context/ContextToolbar.ts
++++ b/modules/tinymce/src/themes/silver/main/ts/ui/context/ContextToolbar.ts
+@@ -166,7 +166,7 @@ const register = (editor: Editor, registryContextToolbars: Record<string, Contex
+   const getScopes: () => ScopedToolbars = Thunk.cached(() => ToolbarScopes.categorise(registryContextToolbars, navigate));
+ 
+   const buildContextToolbarGroups = (allButtons: Record<string, ContextToolbarButtonType>, ctx: InlineContent.ContextToolbarSpec) => {
+-    return identifyButtons(editor, { buttons: allButtons, toolbar: ctx.items, allowToolbarGroups: false }, extras.backstage, Optional.some([ 'form:', 'toolbar:' ]));
++    return identifyButtons(editor, { buttons: allButtons, toolbar: ctx.items, allowToolbarGroups: true }, extras.backstage, Optional.some([ 'form:', 'toolbar:' ]));
+   };
+ 
+   const buildContextFormGroups = (ctx: InlineContent.ContextForm, providers: UiFactoryBackstageProviders) => ContextForm.buildInitGroups(ctx, providers);
+diff --git a/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/Integration.ts b/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/Integration.ts
+index ea2d2d301b..2116df866d 100644
+--- a/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/Integration.ts
++++ b/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/Integration.ts
+@@ -5,7 +5,7 @@ import { Arr, Obj, Optional, Optionals, type Result, Type } from '@ephox/katamar
+ 
+ import type Editor from 'tinymce/core/api/Editor';
+ 
+-import { getToolbarMode, type ToolbarGroupOption, ToolbarMode } from '../../api/Options';
++import type { ToolbarGroupOption } from '../../api/Options';
+ import type { UiFactoryBackstage } from '../../backstage/Backstage';
+ import type { ToolbarConfig } from '../../Render';
+ import { renderMenuButton } from '../button/MenuButton';
+@@ -94,13 +94,8 @@ const types: Record<string, BridgeRenderFn<any>> = {
+         [VerticalDir.Attribute]: backstage.shared.header.isPositionedAtTop() ? VerticalDir.AttributeValue.TopToBottom : VerticalDir.AttributeValue.BottomToTop
+       };
+ 
+-      switch (getToolbarMode(editor)) {
+-        case ToolbarMode.floating:
+-          return renderFloatingToolbarButton(s, backstage, identify, attributes, btnName);
+-        default:
+-          // TODO change this message and add a case when sliding is available
+-          throw new Error('Toolbar groups are only supported when using floating toolbar mode');
+-      }
++      // 分组弹层独立于主工具栏的溢出模式，也可由上下文工具栏打开。
++      return renderFloatingToolbarButton(s, backstage, identify, attributes, btnName);
+     }
+   )
+ };
+diff --git a/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/button/ToolbarButtons.ts b/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/button/ToolbarButtons.ts
+index 00f58bce4e..8249902ce6 100644
+--- a/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/button/ToolbarButtons.ts
++++ b/modules/tinymce/src/themes/silver/main/ts/ui/toolbar/button/ToolbarButtons.ts
+@@ -212,7 +212,7 @@ const renderFloatingToolbarButton = (spec: Toolbar.GroupToolbarButton, backstage
+         dom: {
+           tag: 'div',
+           classes: [ 'tox-toolbar__overflow' ],
+-          attributes
++          attributes: { ...attributes, 'data-toolbar-group': btnName ?? '', 'data-toolbar-group-label': spec.tooltip.getOr('') }
+         }
+       }
+     }

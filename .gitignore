@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.data/
+test-results/
+dist/
+.tools/
+screenshots/
+playwright-report/
+/public/vendor/tinymce/
+
+# Local editor metadata and generated test outputs
+.DS_Store
+.idea/
+.gatebase-tree.identity
+test-results-*/

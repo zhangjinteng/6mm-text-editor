@@ -1,0 +1,25 @@
+/* 比 TinyMCE 的 .tox * 重置规则更具体，保证弹层进入编辑器 UI 后尺寸不被覆盖。 */
+.animation-picker.animation-picker{position:fixed;inset:auto;box-sizing:border-box;margin:0;padding:12px;width:228px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;border:1px solid #dfe6e3;border-radius:11px;background:#fff;color:#34483f;box-shadow:0 4px 10px #163b2910,0 14px 36px #163b2924;font:12px/1.4 "PingFang SC","Microsoft YaHei",sans-serif}
+.animation-picker.animation-picker *{box-sizing:border-box}
+.animation-picker .animation-picker-heading{display:flex;align-items:center;justify-content:space-between;padding:0 1px 10px;font-size:12px;font-weight:600;line-height:18px}
+.animation-picker .animation-picker-heading span:last-child{font-size:10px;font-weight:400;color:#8b9791}
+.animation-picker .animation-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.animation-picker .animation-effect{display:flex;align-items:center;justify-content:center;position:relative;height:40px;padding:8px;border:1px solid #e8eeeb;border-radius:7px;background:#f6f9f7;color:#5a7065;cursor:pointer;transition:background-color .12s,border-color .12s,color .12s}
+.animation-picker .animation-effect:hover{background:#eaf4ef;border-color:#a4c9b6;color:#147d64}
+.animation-picker .animation-effect[aria-pressed=true]{background:#e4f2eb;border-color:#147d64;color:#147d64;box-shadow:inset 0 0 0 1px #147d64}
+.animation-picker .animation-effect[aria-pressed=true]::after{content:'✓';position:absolute;bottom:2px;right:4px;font:10px/12px sans-serif;color:#147d64}
+.animation-picker .animation-effect svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.animation-picker .animation-effect:hover svg,.animation-picker .animation-effect:focus-visible svg{animation-iteration-count:infinite}
+.animation-picker button:focus-visible,.animation-picker input:focus-visible{outline:2px solid #469c7f;outline-offset:2px}
+.animation-picker .animation-picker-actions{display:grid;grid-template-columns:1fr 1fr 28px;gap:4px;border-top:1px solid #edf0ee;margin-top:11px;padding-top:9px}
+.animation-picker .animation-picker-actions button{display:flex;align-items:center;justify-content:center;gap:5px;height:29px;padding:5px;border:0;border-radius:5px;background:transparent;color:#66796f;font:11px/16px "PingFang SC",sans-serif;cursor:pointer}
+.animation-picker .animation-picker-actions button:hover,.animation-picker .animation-picker-actions button[aria-expanded=true]{background:#edf5f0;color:#147d64}
+.animation-picker .animation-picker-actions svg{width:17px;height:17px;flex-shrink:0}
+.animation-picker .animation-playback{padding:9px 0 0;border-top:1px solid #edf0ee;margin-top:11px}
+.animation-picker .animation-playback[hidden]{display:none}
+.animation-picker .animation-playback label{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:8px;font:11px/18px "PingFang SC",sans-serif}
+.animation-picker .animation-playback input[type=number]{width:64px;height:29px;border:1px solid #dce5df;border-radius:5px;padding:4px 6px;background:#fff;color:#34483f;font:12px/18px "PingFang SC",sans-serif}
+.animation-picker .animation-playback input:disabled{background:#f5f7f6;color:#a1aaa5}
+.animation-picker .animation-playback input[type=checkbox]{appearance:auto;accent-color:#147d64;width:15px;height:15px;cursor:pointer}
+.animation-picker .animation-playback p{font:10px/16px "PingFang SC",sans-serif;color:#8b9791;margin:8px 0}
+.animation-picker .animation-playback [data-apply]{display:flex;justify-content:center;align-items:center;width:100%;height:30px;border:0;border-radius:5px;padding:6px;background:#147d64;color:#fff;font:11px/16px "PingFang SC",sans-serif;cursor:pointer}
