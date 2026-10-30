@@ -1,3 +1,4 @@
+import { advancedTextStyles } from './text-advanced';
 import { animationStyles } from './animations';
 
 export interface Revision {
@@ -63,7 +64,8 @@ export function persistDraft(draft: Draft, withRevision = false): Draft {
 
 export const contentStyles = `
 ${animationStyles}
-span[data-text-draggable] { display: inline-block; }
+${advancedTextStyles}
+span[data-text-draggable] { display: inline-block; min-height: 1em; white-space: pre-wrap; overflow-wrap: anywhere; }
 body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; color: #25342f; font-size: 15px; line-height: 1.9; letter-spacing: 0; min-height: 100vh; isolation: isolate; box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
 h1 { font-size: 32px; line-height: 1.4; margin: 16px 0; font-weight: 650; }
 h2 { font-size: 21px; margin-top: 32px; line-height: 1.5; }
@@ -71,6 +73,7 @@ h3 { font-size: 18px; } a { color: #147d64; }
 .document-background-color { position: fixed; inset: 0; z-index: -2; pointer-events: none; user-select: none; margin: 0; border: 0; padding: 0; }
 img[data-document-background] { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 0 !important; max-width: none !important; max-height: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; object-fit: cover !important; object-position: center !important; transform: none !important; z-index: -1 !important; pointer-events: none !important; user-select: none !important; }
 img, video, iframe { max-width: 100%; } figure.image { margin: 28px 0; } figure img { border-radius: 4px; }
+img[data-image-locked="true"] { cursor: default !important; }
 figcaption { color: #7c8580; font-size: 12px; text-align: center; margin-top: 6px; }
 blockquote { border-left: 3px solid #147d64; margin: 24px 0; padding: 2px 24px; color: #63706d; background: #f5f8f6; }
 table { width: 100%; } td, th { border: 1px solid #dce4df; padding: 10px 14px; text-align: left; }

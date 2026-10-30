@@ -32,3 +32,6 @@
 .tox .tox-toolbar__overflow[data-toolbar-group="textgroupstyle"] .tox-tbtn,.tox .tox-toolbar__overflow[data-toolbar-group="textgroupparagraph"] .tox-tbtn{width:44px;height:36px;margin:0;border:1px solid #e2eae6;border-radius:6px;background:#f4f8f6}
 .tox .tox-toolbar__overflow[data-toolbar-group^="textgroup"] .tox-tbtn:hover{background:#e7f1ec}
 .tox .tox-toolbar__overflow[data-toolbar-group^="textgroup"] .tox-tbtn--enabled{background:#cce7db;border-color:#9bc5b1;color:#147d64}
+/* Keep the bottom object toolbar on one row; narrow canvases can scroll to every control. */
+.tox .tox-pop[data-editor-toolbar-position="bottom"] .tox-toolbar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}
+.tox .tox-pop[data-editor-toolbar-position="bottom"] .tox-toolbar__group{flex-shrink:0;flex-wrap:nowrap}

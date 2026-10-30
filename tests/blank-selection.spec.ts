@@ -13,7 +13,7 @@ test('图片选中后点击画布及行尾空白，只取消选中，不激活�
   const frame=page.frameLocator('.tox-edit-area iframe');const text=frame.locator('[data-text-draggable]');
   const image=frame.locator('img');const imageBefore=await image.boundingBox();const textBefore=await text.boundingBox();
   const area=(await page.locator('.tox-edit-area iframe').boundingBox())!;
-  const handle=frame.getByRole('button',{name:'拖动文字',exact:true});
+  const handle=frame.locator('.text-box-frame');
   for (const [x,y] of [[700,180],[700,325]]) {
     await image.click();await expect(page.locator('.tox-pop [data-mce-name="imagefill"]')).toBeVisible();
     await page.mouse.click(area.x+x,area.y+y);await page.waitForTimeout(150);
@@ -26,11 +26,12 @@ test('图片选中后点击画布及行尾空白，只取消选中，不激活�
   }
   await text.click();await expect(handle).toBeVisible();
   await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toBeVisible();
+  await text.dblclick();
   await page.keyboard.press('End');await page.keyboard.down('Shift');await page.keyboard.press('Home');await page.keyboard.up('Shift');
   await expect(page.locator('.tox-pop [data-mce-name="textgroupstyle"]')).toBeVisible();
   expect(await page.evaluate(()=>window.tinymce.activeEditor.selection.getContent({format:'text'}))).not.toBe('');
   await page.mouse.click(area.x+800,area.y+400);await expect(handle).toBeHidden();
-  await frame.locator('#plain').click({position:{x:25,y:14}});
+  await frame.locator('#plain').dblclick({position:{x:25,y:14}});
   await page.keyboard.press('End');await page.keyboard.insertText('新增');
   await expect(frame.locator('#plain')).toContainText('新增');
 });

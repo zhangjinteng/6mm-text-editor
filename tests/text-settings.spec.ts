@@ -1,0 +1,81 @@
+import { expect, test, type Page } from '@playwright/test';
+import type { Editor } from 'tinymce';
+declare global { interface Window { tinymce: { activeEditor: Editor } } }
+const box = (page: Page) => page.frameLocator('.tox-edit-area iframe').locator('#settings-text');
+const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body > [data-text-draggable]');
+const dialog = (page: Page) => page.getByRole('dialog', { name: '文字设置', exact: true });
+async function open(page: Page) {
+  await box(page).click();
+  await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  await expect(dialog(page)).toBeVisible();
+  await expect(preview(page)).toContainText('预览我的文字');
+  return dialog(page);
+}
+test.beforeEach(async ({ page }) => {
+  await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await page.evaluate(() => {
+    const editor = window.tinymce.activeEditor;
+    editor.setContent('<p><span id="settings-text" data-text-draggable="true" style="position:absolute;left:100px;top:100px;width:360px;font-size:38px;line-height:1.5"><strong style="color:#147d64">预览我的文字</strong><br>LIVE PREVIEW</span></p>');
+    editor.undoManager.clear(); editor.undoManager.add();
+  });
+});
+test('one toolbar entry opens all effects; previews stay isolated and apply as one undo step', async ({ page }) => {
+  const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
+  const d = await open(page);
+  await expect(d.getByRole('tablist', { name: '文字设置分类', exact: true }).getByRole('tab')).toHaveCount(3);
+  await d.getByRole('textbox', { name: '整体不透明度（0—100%）', exact: true }).fill('65');
+  await expect(preview(page)).toHaveCSS('opacity', '0.65'); await expect(box(page)).toHaveCSS('opacity', '1');
+  await d.getByRole('tab', { name: '描边', exact: true }).click();
+  await d.getByRole('checkbox', { name: '启用文字描边', exact: true }).check();
+  await d.getByRole('textbox', { name: '描边宽度（0—10 px）', exact: true }).fill('2');
+  await d.getByRole('tab', { name: '填充', exact: true }).click();
+  await d.getByRole('combobox', { name: '填充类型', exact: true }).selectOption('gradient');
+  await d.getByRole('textbox', { name: '色标颜色', exact: true }).fill('#ef4444');
+  await d.getByRole('tab', { name: '变形', exact: true }).click();
+  await d.getByRole('button', { name: '上拱', exact: true }).click();
+  await d.getByRole('combobox', { name: '多行处理', exact: true }).selectOption('join');
+  await d.getByRole('textbox', { name: '变形程度', exact: true }).fill('70');
+  await expect(preview(page).locator('textPath').first()).toContainText('预览我的文字 LIVE PREVIEW');
+  await expect(preview(page).locator('linearGradient stop').first()).toHaveAttribute('stop-color', '#ef4444');
+  await expect(preview(page).locator('[data-text-stroke-layer]')).toHaveAttribute('stroke-width', '2');
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  await page.screenshot({ path: 'screenshots/text-settings-desktop.png' });
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(box(page)).toHaveAttribute('data-text-fill', 'gradient');
+  await expect(box(page)).toHaveAttribute('data-text-curve', 'up');
+  await expect(box(page)).toHaveCSS('opacity', '0.65');
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.undo());
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.redo());
+  await expect(box(page)).toHaveAttribute('data-text-curve-strength', '70');
+  await open(page); await d.getByRole('tab', { name: '变形', exact: true }).click();
+  await expect(d.getByRole('textbox', { name: '变形程度', exact: true })).toHaveValue('70');
+  await d.getByRole('button', { name: '重置效果', exact: true }).click();
+  await expect(preview(page)).toHaveCSS('opacity', '1'); await expect(preview(page).locator('svg')).toHaveCount(0);
+  await expect(box(page)).toHaveCSS('opacity', '0.65');
+  await d.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(box(page)).toHaveAttribute('data-text-curve', 'up');
+  await open(page); await d.getByRole('button', { name: '重置效果', exact: true }).click(); await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(box(page)).not.toHaveAttribute('data-text-curve'); await expect(box(page)).not.toHaveAttribute('data-text-fill');
+  await expect(box(page).locator('[data-text-source] br')).toHaveCount(1);
+});
+test('Escape and close discard changes; keyboard tabs and narrow layout remain usable', async ({ page }) => {
+  const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
+  let d = await open(page);
+  await d.getByRole('textbox', { name: '整体不透明度（0—100%）', exact: true }).fill('10');
+  await page.keyboard.press('Escape'); await expect(d).toHaveCount(0);
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  d = await open(page);
+  await d.getByRole('tab', { name: '外观', exact: true }).press('ArrowRight');
+  await expect(d.getByRole('tab', { name: '填充', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await d.getByRole('tab', { name: '填充', exact: true }).press('End');
+  await expect(d.getByRole('tab', { name: '变形', exact: true })).toBeFocused();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(preview(page)).toBeVisible();
+  const bounds = (await d.boundingBox())!; expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390);
+  await d.getByRole('button', { name: '下弯', exact: true }).click();
+  await expect(preview(page)).toHaveAttribute('data-text-curve', 'down');
+  await page.screenshot({ path: 'screenshots/text-settings-mobile.png' });
+  await d.getByRole('button', { name: '关闭文字设置', exact: true }).click();
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+});

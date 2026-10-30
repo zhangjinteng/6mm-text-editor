@@ -6,6 +6,10 @@ import { registerToolbarPosition } from './toolbar-position';
 import { registerLayerSettings } from './object-layers';
 import { bilibiliGiftEmoticons } from './bilibili-gifts';
 import { registerTextAnimations } from './animations';
+import { registerAdvancedText } from './text-advanced';
+import { registerTextSettings } from './text-settings';
+import { registerTextObjectTools } from './text-object-tools';
+import { registerTextTypography } from './text-typography';
 import { registerTextDragging } from './text-dragging';
 import { registerTextClearFormat } from './text-clear-format';
 import { registerSelectionHeadings } from './selection-headings';
@@ -15,6 +19,7 @@ import { registerCanvasInsertion } from './canvas-insertion';
 import { registerImageCrop } from './image-crop';
 import { registerImageClipboard } from './image-clipboard';
 import { registerImageBackground } from './image-background';
+import { registerImageSettings } from './image-settings';
 import { registerDanmakuToolbar } from './live/toolbar';
 import { resolvePlugins, type Settings } from './plugins';
 
@@ -33,7 +38,7 @@ export function editorOptions(settings: Settings, callbacks: {
     base_url: '/vendor/tinymce', suffix: '.min', license_key: 'gpl',
     plugins: resolvePlugins(settings),
     // 显式保留声明属性，保证源码应用、粘贴、保存后可重新绑定。
-    extended_valid_elements: 'div[data-danmaku-id|data-danmaku-source|data-danmaku-skin|data-danmaku-types|data-danmaku-limit|data-danmaku-paused|data-danmaku-draggable|data-danmaku-x|data-danmaku-y|class|style|id|title|contenteditable]',
+    extended_valid_elements: 'div[data-danmaku-id|data-danmaku-source|data-danmaku-skin|data-danmaku-types|data-danmaku-limit|data-danmaku-paused|data-danmaku-draggable|data-danmaku-x|data-danmaku-y|class|style|id|title|contenteditable],svg[data-text-warp|x|y|preserveAspectRatio|xmlns|width|height|viewBox|aria-hidden|style],g[id|clip-path|data-text-path-glyphs|data-text-warp|style|transform|data-text-shadow-layer|opacity|data-text-fill-layer|fill|stroke|stroke-width|stroke-linejoin|stroke-miterlimit|mask|data-text-stroke-layer],clipPath[id|clipPathUnits],use[href|clip-path],tspan[baseline-shift|fill|font-family|font-size|font-weight|font-style|letter-spacing|text-decoration],mask[id|maskUnits|maskContentUnits|x|y|width|height|mask-type],rect[shape-rendering|x|y|width|height|fill],defs,linearGradient[id|gradientUnits|x1|y1|x2|y2],radialGradient[id|gradientUnits|cx|cy|r],stop[offset|stop-color|stop-opacity],path[data-text-glyph|fill-rule|id|d|fill],pattern[id|patternUnits|patternTransform|width|height],image[href|x|y|transform|width|height|preserveAspectRatio],text[transform|opacity|data-text-fill-layer|x|y|direction|xml:space|textLength|lengthAdjust|mask|stroke-linejoin|stroke-miterlimit|data-text-stroke-layer|fill|font-family|font-size|font-weight|font-style|letter-spacing|text-decoration|text-anchor|paint-order|stroke-width|stroke],textPath[href|startOffset|textLength|lengthAdjust]',
     language: 'zh-CN', language_url: '/vendor/tinymce/langs/zh-CN.js',
     menubar: 'file edit view insert format tools table help',
     menu: { format: { title: 'Format', items: 'bold italic underline strikethrough superscript subscript codeformat | styles blocks fontfamily fontsize align lineheight | forecolor backcolor | language | removeformat | removeimagebackground' } },
@@ -51,9 +56,9 @@ export function editorOptions(settings: Settings, callbacks: {
     emoticons_append: bilibiliGiftEmoticons,
     emoticons_database_url: '/vendor/tinymce/plugins/emoticons/js/emojis.min.js',
     contextmenu: 'link image table',
-    quickbars_selection_toolbar: 'fontfamily fontsizeinput | textgroupstyle forecolor backcolor textgroupparagraph | textanimation textdrag quicklink',
+    quickbars_selection_toolbar: 'fontfamily fontsizeinput | textgroupstyle forecolor backcolor textgroupparagraph textgrouplayout | textanimation textdrag | textsettings textgroupobject quicklink',
     quickbars_insert_toolbar: false,
-    quickbars_image_toolbar: 'image | alignleft aligncenter alignright | imagefill imagecrop imagebackground',
+    quickbars_image_toolbar: 'image | alignleft aligncenter alignright | imagefill imagecrop imagebackground imagesettings',
     image_advtab: true, image_caption: true, image_title: true, image_uploadtab: true,
     automatic_uploads: true, file_picker_types: 'image media', images_file_types: 'jpeg,jpg,png,gif,webp,bmp',
     images_upload_handler: async (blobInfo) => {
@@ -78,10 +83,14 @@ export function editorOptions(settings: Settings, callbacks: {
     autosave_ask_before_unload: true, autosave_interval: '15s', autosave_retention: '1440m', autosave_prefix: 'test44-tinymce-',
     save_onsavecallback: callbacks.save,
     setup: (editor) => {
+      registerAdvancedText(editor);
+      registerTextObjectTools(editor);
+      registerTextSettings(editor);
       registerToolbarPosition(editor);
       registerLayerSettings(editor);
       registerTextAnimations(editor);
       registerTextDragging(editor);
+      registerTextTypography(editor);
       registerTextClearFormat(editor);
       registerSelectionHeadings(editor);
       registerTextToolGroups(editor);
@@ -90,6 +99,7 @@ export function editorOptions(settings: Settings, callbacks: {
       registerImageCrop(editor);
       registerImageClipboard(editor);
       registerImageBackground(editor);
+      registerImageSettings(editor);
       registerDanmakuToolbar(editor);
       registerCanvasBackground(editor);
       registerBlankSelection(editor);

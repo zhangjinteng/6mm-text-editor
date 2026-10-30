@@ -30,9 +30,8 @@ test('画布插入纯文本和换行，位于点击处，可拖动、撤销重�
   const area = (await page.locator('.tox-edit-area iframe').boundingBox())!;
   const box = (await inserted.boundingBox())!;
   expect(box.x).toBeCloseTo(area.x + 250, 0); expect(box.y).toBeCloseTo(area.y + 170, 0);
-  const moveHandle = frame.locator('[data-text-move-handle]');
-  await expect(moveHandle).toBeVisible();
-  const handle = (await moveHandle.boundingBox())!;
+  await inserted.click();
+  const handle = (await inserted.boundingBox())!;
   await page.mouse.move(handle.x + 10, handle.y + 10); await page.mouse.down();
   await page.mouse.move(handle.x + 50, handle.y + 40, { steps: 4 }); await page.mouse.up();
   const moved = (await inserted.boundingBox())!;

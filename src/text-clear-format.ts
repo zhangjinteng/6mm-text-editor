@@ -9,7 +9,7 @@ export function registerTextClearFormat(editor: Editor): void {
     editor.formatter.register('removeformat', [
       ...formats.map(format => 'selector' in format ? {
         ...format,
-        selector: format.selector?.split(',').map((part: string) => `${part.trim()}:not([data-text-draggable])`).join(',')
+        selector: format.selector?.split(',').map((part: string) => `${part.trim()}:not([data-text-draggable]):not([data-text-source]):not([data-text-render]):not([data-text-background-render])`).join(',')
       } : format),
       { selector: 'span[data-selection-heading]', attributes: ['data-selection-heading'], remove: 'empty', split: true, expand: false, deep: true }
     ]);
@@ -24,13 +24,14 @@ export function registerTextClearFormat(editor: Editor): void {
     editor.undoManager.transact(() => {
       const bookmark = editor.selection.getBookmark();
       for (const wrapper of wrappers) {
-        const styles = Object.fromEntries(textStyles.map(name => [name, wrapper.style.getPropertyValue(name)]).filter(([, value]) => value));
+        const styles = Object.fromEntries(textStyles.filter(name => name !== 'background-color' || wrapper.getAttribute('data-text-background') !== 'true').map(name => [name, wrapper.style.getPropertyValue(name)]).filter(([, value]) => value));
         if (!Object.keys(styles).length) continue;
         // 将文字样式放到内层，原生清除逻辑可按选区拆分内层而不拆分定位外层。
         const inner = editor.getDoc().createElement('span');
         editor.dom.setStyles(inner, styles);
-        while (wrapper.firstChild) inner.append(wrapper.firstChild);
-        wrapper.append(inner);
+        const source = wrapper.querySelector<HTMLElement>(':scope > [data-text-source]') ?? wrapper;
+        while (source.firstChild) inner.append(source.firstChild);
+        source.append(inner);
         for (const property of Object.keys(styles)) editor.dom.setStyle(wrapper, property, null);
       }
       editor.selection.moveToBookmark(bookmark);

@@ -1,5 +1,6 @@
 import type { Editor } from 'tinymce';
 import './image-crop.css';
+import { imageGeometry } from './image-geometry';
 
 type Crop = { x: number; y: number; width: number; height: number };
 const full = (): Crop => ({ x: 0, y: 0, width: 1, height: 1 });
@@ -25,11 +26,14 @@ export function registerImageCrop(editor: Editor): void {
       const node = editor.selection.getNode();
       const image = node.closest('img') || node.querySelector('img');
       if (!image || !editor.getBody().contains(image)) return;
+      if (image.getAttribute('data-image-locked') === 'true') {
+        editor.notificationManager.open({ text: '请先在图片设置中解锁，再裁剪图片。', type: 'info' }); return;
+      }
       if (!CSS.supports('object-view-box', 'inset(0%)')) {
         editor.notificationManager.open({ text: '当前浏览器不支持图片裁剪，请使用新版 Chrome 或 Edge。', type: 'warning' });
         return;
       }
-      const bounds = image.getBoundingClientRect();
+      const bounds = imageGeometry(image);
       if (!bounds.width || !bounds.height || !image.complete || !image.naturalWidth) {
         editor.notificationManager.open({ text: '图片尚未加载完成，请稍后重试。', type: 'warning' }); return;
       }

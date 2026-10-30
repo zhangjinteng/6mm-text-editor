@@ -1,4 +1,5 @@
 import type { Editor } from 'tinymce';
+import { selectionHasLockedText } from './text-box-state';
 import { openAnimationPicker, type AnimationPlayback } from './animation-picker';
 import license from 'animate.css/LICENSE?raw';
 import bounce from 'animate.css/source/attention_seekers/bounce.css?raw';
@@ -53,6 +54,7 @@ export function registerTextAnimations(editor: Editor): void {
   editor.ui.registry.addButton('textanimation', {
     text: '动画', tooltip: '文字动画',
     onAction: () => {
+      if (editor.mode.isReadOnly() || selectionHasLockedText(editor)) return;
       if (closePicker) { closePicker(); return; }
       const bookmark = editor.selection.getBookmark(2, true);
       const node = editor.dom.getParent(editor.selection.getNode(), '[data-text-animation]');
@@ -65,6 +67,7 @@ export function registerTextAnimations(editor: Editor): void {
       const anchor = editor.getContainer().ownerDocument.querySelector<HTMLElement>('.tox-pop [data-mce-name="textanimation"]');
       if (!anchor) return;
       closePicker = openAnimationPicker(anchor, Object.keys(textAnimations), selected, playback, (name, settings) => {
+        if (editor.mode.isReadOnly() || selectionHasLockedText(editor)) return;
         editor.focus();
         editor.selection.moveToBookmark(bookmark);
         editor.undoManager.transact(() => {

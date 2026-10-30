@@ -172,6 +172,8 @@ test('表情符号仅在画布工具栏显示并可插入', async ({ page }) => 
       await dialog.getByRole('textbox', { name: '搜索', exact: true }).fill('grinning');
       const emoji = dialog.locator('.tox-collection__item').first();
       await expect(emoji).toBeVisible();
+      // Wait for TinyMCE's debounced search to replace the initial category results.
+      await expect(emoji).toContainText('😀');
       const symbol = await emoji.innerText();
       await emoji.click();
       await expect(dialog).toHaveCount(0);

@@ -1,4 +1,5 @@
 import type { Editor } from 'tinymce';
+import { selectionHasLockedText } from './text-box-state';
 
 const selector = 'img:not([data-mce-object]):not([data-mce-placeholder]):not([data-document-background]),div[data-danmaku-source],span[data-text-draggable],table,video,iframe';
 type LayerAction = 'backward' | 'forward' | 'bottom' | 'top';
@@ -21,7 +22,7 @@ export function registerLayerSettings(editor: Editor): void {
       .filter(element => range.intersectsNode(element)).map(outerObject))];
   }
   function canApply() {
-    return !editor.mode.isReadOnly() && (targets().length > 0 || (!editor.selection.isCollapsed() && !!editor.selection.getContent({ format: 'text' }).trim()));
+    return !editor.mode.isReadOnly() && !selectionHasLockedText(editor) && (targets().length > 0 || (!editor.selection.isCollapsed() && !!editor.selection.getContent({ format: 'text' }).trim()));
   }
   function apply(action: LayerAction) {
     if (!canApply()) return;
@@ -72,7 +73,7 @@ export function registerLayerSettings(editor: Editor): void {
     ] as const).map(([text, action]) => ({ type: 'menuitem' as const, text, onAction: () => apply(action) }))),
     onSetup: api => {
       const update = () => api.setEnabled(canApply());
-      const events = 'NodeChange SelectionChange SwitchMode';
+      const events = 'NodeChange SelectionChange SwitchMode TextBoxLockChanged';
       update(); editor.on(events, update);
       return () => editor.off(events, update);
     }

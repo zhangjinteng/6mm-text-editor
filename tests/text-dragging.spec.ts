@@ -3,10 +3,7 @@ import type { Editor } from 'tinymce';
 declare global { interface Window { tinymce: { activeEditor: Editor } } }
 
 async function dragText(page: Page, text: Locator, dx: number, dy: number, cancel = false) {
-  await text.hover();
-  const handle = page.frameLocator('.tox-edit-area iframe').getByRole('button', { name: '拖动文字', exact: true });
-  await expect(handle).toBeVisible();
-  const box = (await handle.boundingBox())!;
+  const box = (await text.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy, { steps: 12 });
@@ -121,7 +118,7 @@ test('重复框选整段切换拖动不会累积 span，并能清除旧的嵌套
   await expect(body.locator('strong')).toHaveCSS('color','rgb(224, 62, 45)');
 });
 
-test('拖动后点击输入及框选文字不再移动对象，手柄不保存或导出', async ({ page }) => {
+test('拖动后双击输入及框选文字不再移动对象，手柄不保存或导出', async ({ page }) => {
   await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   await page.evaluate(() => {
     const e = window.tinymce.activeEditor;
@@ -130,7 +127,7 @@ test('拖动后点击输入及框选文字不再移动对象，手柄不保存�
   const text = page.frameLocator('.tox-edit-area iframe').locator('[data-text-draggable]');
   await dragText(page, text, 120, 120);
   const position = await text.evaluate(e => ({ left: (e as HTMLElement).style.left, top: (e as HTMLElement).style.top }));
-  await text.click();
+  await text.dblclick();
   await page.keyboard.press('End'); await page.keyboard.insertText('新增');
   await expect(text).toContainText('新增');
   const box = (await text.boundingBox())!;
@@ -145,14 +142,14 @@ test('拖动后点击输入及框选文字不再移动对象，手柄不保存�
   await page.reload(); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   await expect(text).toContainText('新增');
   expect(await text.evaluate(e => ({left:(e as HTMLElement).style.left,top:(e as HTMLElement).style.top}))).toEqual(position);
-  await text.hover();
-  await expect(page.frameLocator('.tox-edit-area iframe').getByRole('button',{name:'拖动文字',exact:true})).toBeVisible();
+  await text.click();
+  await expect(page.frameLocator('.tox-edit-area iframe').locator('.text-box-frame')).toBeVisible();
   await page.getByRole('navigation',{name:'文档视图'}).getByRole('button',{name:'预览',exact:true}).click();
   await expect(page.frameLocator('iframe[title="文档预览"]').locator('[data-text-move-handle]')).toHaveCount(0);
 });
 
 for (const tag of ['h2', 'p']) {
-  test(`框选整个 ${tag} 时识别内部拖动文字并显示可用手柄`, async ({ page }) => {
+  test(`框选整个 ${tag} 后单击内部文本框即可拖动`, async ({ page }) => {
     await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
     await page.mouse.move(1200, 30);
     await page.evaluate(tag => {
@@ -164,12 +161,9 @@ for (const tag of ['h2', 'p']) {
     expect(await page.evaluate(() => window.tinymce.activeEditor.selection.getNode().tagName.toLowerCase())).toBe(tag);
     const frame = page.frameLocator('.tox-edit-area iframe');
     const text = frame.locator('[data-text-draggable]');
-    const handle = frame.getByRole('button', { name: '拖动文字', exact: true });
-    await expect(handle).toBeVisible();
+
     const before = (await text.boundingBox())!;
-    const box = (await handle.boundingBox())!;
-    await page.mouse.move(box.x+13, box.y+13); await page.mouse.down();
-    await page.mouse.move(box.x+113, box.y+93, {steps:10}); await page.mouse.up();
+    await dragText(page, text, 100, 80);
     const after = (await text.boundingBox())!;
     expect(after.x-before.x).toBeCloseTo(100,0); expect(after.y-before.y).toBeCloseTo(80,0);
     await expect(text).toHaveCount(1);
@@ -178,7 +172,8 @@ for (const tag of ['h2', 'p']) {
       e.selection.select(e.getBody().querySelector('p:last-of-type')!,true);
       e.nodeChanged(); e.dispatch('SelectionChange');
     });
-    await expect(handle).toBeHidden();
+    await frame.getByText('普通文字', {exact:true}).click({position:{x:10,y:10}});
+    await expect(frame.locator('.text-box-frame')).toBeVisible();
   });
 }
 

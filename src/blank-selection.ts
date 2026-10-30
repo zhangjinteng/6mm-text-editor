@@ -66,10 +66,10 @@ export function registerBlankSelection(editor: Editor): void {
     };
     doc.addEventListener('pointerdown', down, true);
     doc.addEventListener('keydown', key, true);
-    editor.on('BeforeSetContent Undo Redo CanvasTextInserted', reset);
+    editor.on('BeforeSetContent Undo Redo CanvasTextInserted TextBoxSelected', reset);
     editor.on('remove', () => {
       reset(); doc.removeEventListener('pointerdown', down, true); doc.removeEventListener('keydown', key, true);
-      editor.off('BeforeSetContent Undo Redo CanvasTextInserted', reset);
+      editor.off('BeforeSetContent Undo Redo CanvasTextInserted TextBoxSelected', reset);
     });
   });
 }
