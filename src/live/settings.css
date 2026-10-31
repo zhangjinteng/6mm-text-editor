@@ -1,0 +1,13 @@
+.danmaku-settings-dialog{width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:0;border:1px solid #dce6e0;border-radius:14px;color:#293f34;background:#fff;box-shadow:0 20px 70px #11291c40;font:13px/1.5 "PingFang SC",sans-serif}
+.danmaku-settings-dialog::backdrop{background:#172d2166;backdrop-filter:blur(2px)}
+.danmaku-settings-dialog header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #e5ece7}
+.danmaku-settings-dialog h2{margin:0;font-size:17px}.danmaku-settings-dialog header p{margin:4px 0 0;font-size:12px;color:#7c8d82}
+.danmaku-settings-dialog header button{font-size:24px;width:32px;height:32px;border-radius:6px;color:#637d6d}
+.danmaku-settings-body{padding:22px}.danmaku-settings-body section+section{margin-top:24px}.danmaku-settings-body h3{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:0 0 12px}
+.danmaku-settings-body h3 span{font-size:11px;font-weight:400;color:#7c8d82}.danmaku-settings-hint{margin:10px 0 0;color:#829286;font-size:11px;line-height:1.8}
+.danmaku-settings-align,.danmaku-settings-layers{display:grid;gap:8px}.danmaku-settings-align{grid-template-columns:repeat(3,minmax(0,1fr))}.danmaku-settings-layers{grid-template-columns:repeat(2,minmax(0,1fr))}
+.danmaku-settings-body button{padding:10px 4px;border:1px solid #d5e1d9;border-radius:6px;color:#536d5c;background:#fff;font:inherit}
+.danmaku-settings-body button[aria-pressed=true]{border-color:#147d64;background:#edf5f1;color:#147d64}
+.danmaku-settings-dialog button{cursor:pointer}.danmaku-settings-dialog button:disabled{opacity:.4;cursor:default}.danmaku-settings-dialog button:focus-visible{outline:2px solid #147d64;outline-offset:2px}.danmaku-settings-dialog button:not(:disabled):hover{background:#edf4ef}
+.danmaku-settings-dialog footer{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #e5ece7}.danmaku-settings-dialog footer button{padding:8px 14px;border-radius:6px;color:#637d6d;font:inherit}.danmaku-settings-dialog footer [data-apply]{background:#147d64;color:#fff}
+@media(max-width:480px){.danmaku-settings-dialog header,.danmaku-settings-dialog footer{padding:14px 16px}.danmaku-settings-body{padding:18px 16px}}

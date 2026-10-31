@@ -1,0 +1,16 @@
+.text-config-panel{width:320px;min-height:0;position:sticky;top:16px;align-self:flex-start;height:calc(100vh - 210px);overflow:hidden}
+.text-config-host{height:100%;min-height:0}
+.text-settings-embedded.text-settings-dialog{display:flex;flex-direction:column;width:100%;height:100%;max-height:none;border:0;border-radius:0;box-shadow:none;padding:0;margin:0;overflow:hidden}
+.text-settings-embedded header{padding:16px 18px;flex-shrink:0}
+.text-settings-embedded header h2{font-size:15px}
+.text-settings-embedded header p{font-size:11px}
+.text-settings-embedded .text-settings-body{display:block;min-height:0;flex:1;overflow:auto}
+.text-settings-embedded .text-settings-controls{max-height:none;overflow:visible;padding:16px 18px 24px}
+.text-settings-embedded .text-settings-controls>[role=tablist]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));top:-1px;margin-bottom:20px;gap:4px;padding:4px;box-shadow:0 10px 0 #fff}
+.text-settings-embedded .text-settings-controls>[role=tablist] button{padding:8px 4px}
+.text-settings-embedded footer{padding:10px 14px;flex-shrink:0;background:#fafcfb}
+.text-settings-embedded footer>div{display:none}
+.text-settings-embedded footer button{padding:6px 8px}
+.text-settings-embedded .text-settings-error{margin:10px 18px}
+@media(max-width:900px){.text-config-panel{width:290px}}
+@media(max-width:620px){.text-config-panel.side-panel{position:relative;top:auto;right:auto;bottom:auto;width:100%;height:430px;max-height:60vh;margin-top:12px;box-shadow:none;z-index:auto}.text-settings-embedded .text-settings-controls{max-height:none}.text-settings-embedded header{padding:12px 16px}}

@@ -143,5 +143,4 @@ export function registerTextTypography(editor: Editor): void {
     ]),
     onSetup: api => { const update = () => api.setEnabled(!editor.mode.isReadOnly()); update(); editor.on(events, update); return () => editor.off(events, update); }
   });
-  editor.ui.registry.addGroupToolbarButton('textgrouplayout', { text: '排版', tooltip: '对齐、行距与字间距', items: 'textalignleft textaligncenter textalignright textalignjustify | textlineheight textspacing' });
 }

@@ -57,7 +57,7 @@ test('独立描边层应用、跟随位置和尺寸、撤销重做、保存重�
   const open = async () => { await image.click(); await page.locator('.tox-pop:visible [data-mce-name="imagesettings"]').click(); return page.getByRole('dialog', { name: '图片设置', exact: true }); };
   let d = await open(); await d.getByRole('tab', { name: '描边', exact: true }).click();
   await d.getByLabel('启用描边', { exact: true }).check(); await d.getByLabel('描边位置').selectOption('outside');
-  await d.getByLabel('描边颜色').fill('#ff0000');
+  await d.getByRole('textbox', { name: '描边颜色', exact: true }).fill('#ff0000');
   await expect.poll(async () => d.locator('.image-settings-stroke-preview').evaluate(el => !!(el as HTMLElement).style.backgroundImage)).toBe(true);
   const previewCenter = await d.locator('.image-settings-preview').evaluate(stage => {
     const picture = stage.querySelector('img')!.getBoundingClientRect(), stroke = stage.querySelector('.image-settings-stroke-preview')!.getBoundingClientRect();

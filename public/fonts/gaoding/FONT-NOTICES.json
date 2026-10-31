@@ -1,0 +1,647 @@
+[
+  {
+    "id": "100041497",
+    "name": "Aa剑豪体 Regular",
+    "metadata": {
+      "0": "Copyright(c) 2022 HanMeiHutong (XiaMen) Technology Co.Ltd. ,All rights reserved.",
+      "1": "AaJianHaoTi",
+      "2": "Regular",
+      "4": "AaJianHaoTi",
+      "5": "Version 1.000",
+      "6": "AaJianHaoTi"
+    }
+  },
+  {
+    "id": "364006",
+    "name": "阿朱泡泡体",
+    "metadata": {
+      "0": "Copyright(c) Tianjin Founder Handwriting Digital Technology Co., Ltd. 2017",
+      "1": "AZPPT_1_1436212_19",
+      "2": "Regular",
+      "4": "AZPPT_1_1436212_19",
+      "5": "Version 1.9",
+      "6": "AZPPT_1_1436212_19"
+    }
+  },
+  {
+    "id": "194704974",
+    "name": "标小智龙珠体",
+    "metadata": {
+      "0": "Copyright 2022-2023 LongZhuTi Project Authors. Copyright 2020 The RocknRoll Project Authors (https://github.com/fontworks-fonts/RocknRoll)",
+      "1": "LongZhuTi",
+      "2": "Regular",
+      "4": "LongZhuTi Regular",
+      "5": "Version 1.000; 20230201",
+      "6": "LogoSCLongZhuTi-Regular",
+      "9": "Fontworks Inc & LongZhuTi team: ZERO子、时光羊、荆南、频凡、刘鹏、Little White Dog、帆影Magmeta、奈白不弍、白日月球、ChaoTawei、雨三（排名不分先后）",
+      "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL",
+      "14": "https://scripts.sil.org/OFL"
+    }
+  },
+  {
+    "id": "193220005",
+    "name": "标小智无界黑",
+    "metadata": {
+      "0": "Copyright 2022-2023 The Unbounded Sans Project Authors (https://github.com/NightFurySL2001/unbounded-sans). 标小智 is a registered trademark of 上海婷平网络科技有限公司.\nCopyright 2020 The Dela Sans Project Authors (https://github.com/syakuzen/DelaGothic)",
+      "1": "LogoSC Unbounded Sans",
+      "2": "Regular",
+      "4": "LogoSC Unbounded Sans Regular",
+      "5": "Version 1.100; 20230801",
+      "6": "LogoSCUnboundedSans-Regular"
+    }
+  },
+  {
+    "id": "34006515",
+    "name": "点点像素体",
+    "metadata": {
+      "0": "Copyright (C) 2020 wixette",
+      "1": "Dotted Songti Square",
+      "2": "Regular",
+      "4": "Dotted Songti Square Regular",
+      "5": "0.1",
+      "6": "DottedSongtiSquareRegular"
+    }
+  },
+  {
+    "id": "193408044",
+    "name": "抖音美好体",
+    "metadata": {
+      "0": "Copyright(c) Beijing Founder Electronics Co.,Ltd. 北京北大方正电子有限公司",
+      "1": "Douyin Sans",
+      "2": "Bold",
+      "4": "Douyin Sans Bold",
+      "5": "Version 1.00",
+      "6": "DOUYINSANSBOLD-GB"
+    }
+  },
+  {
+    "id": "206843",
+    "name": "二字元心游手绘",
+    "metadata": {
+      "0": "For commercial use, please purchase permission to authorize business:\r\nwww.reeji.com WeChat:reejifontsale Mail:font@reeji.com\r\n© 2019 by Shang hai Rui Xian Creative Design Co., Ltd..All rights reserved.",
+      "1": "ACGN-XinyouB-GB",
+      "2": "Regular",
+      "4": "ACGN-XinyouB-GB Regular",
+      "5": "Version 1.0 www.reeji.com WeChat:reejifontsale Mail:font@reeji.com REEJI Shang hai Rui Xian Creative Design Co., Ltd.",
+      "6": "ACGN-XinyouB-GB-Regular"
+    }
+  },
+  {
+    "id": "193426039",
+    "name": "汉字之美斑驳标宋 特黑",
+    "metadata": {
+      "1": "God-BiaoGBT",
+      "2": "Black",
+      "4": "God-BiaoGBT Black",
+      "5": "Version 1.0  GodFont",
+      "6": "God-BiaoGBT-Black"
+    }
+  },
+  {
+    "id": "402253",
+    "name": "鸿雷板书简体",
+    "metadata": {
+      "1": "HongLei",
+      "2": "Regular",
+      "4": "HongLei Regular",
+      "5": "Version 2.000",
+      "6": "HongLei-Regular"
+    }
+  },
+  {
+    "id": "193316046",
+    "name": "鸿雷拙书简体",
+    "metadata": {
+      "0": "Copyright(c)HongLeiZhuoShu",
+      "1": "HongLeiZhuoShu",
+      "2": "Regular",
+      "4": "鸿雷拙书简体",
+      "5": "Version 1.000",
+      "6": "HongLeiZhuoShu"
+    }
+  },
+  {
+    "id": "194972568",
+    "name": "汇文港黑 Medium",
+    "metadata": {
+      "0": "Font © Copyright 2022 TerryWang.All rights reserved.",
+      "1": "Huiwen-HKHei",
+      "2": "Regular",
+      "4": "Huiwen-HKHei",
+      "5": "V 1.001;本字体文件开源且免费商用,禁止第三方在任何平台以任何方式用此字体牟利。如果您用付费方式获得了此字体文件,请找卖家退款",
+      "6": "HuiwenHKHei-Regular",
+      "7": "Huiwen-HKHei"
+    }
+  },
+  {
+    "id": "34002451",
+    "name": "汇文明朝体",
+    "metadata": {
+      "0": "Public Domain",
+      "1": "Huiwen-mincho",
+      "2": "Regular",
+      "4": "Huiwen-mincho",
+      "5": "Version 1.00;January 14, 2021;FontCreator 12.0.0.2552 32-bit",
+      "6": "Huiwen-mincho"
+    }
+  },
+  {
+    "id": "274057",
+    "name": "胡晓波男神体",
+    "metadata": {
+      "0": "copyright  HuXiaoBo",
+      "1": "HuXiaoBo-NanShen",
+      "2": "Regular",
+      "4": "HuXiaoBo-NanShen",
+      "5": "Version 1.00 December 23, 2019, initial release",
+      "6": "HuXiaoBo-NanShen"
+    }
+  },
+  {
+    "id": "48197800",
+    "name": "胡晓波青年宋 粗",
+    "metadata": {
+      "0": "(c) Copyright HuXiaoBo 2020",
+      "1": "HuXiaoBo-qingniansong Bold",
+      "2": "Regular",
+      "4": "HuXiaoBo-qingniansong Bold",
+      "5": "Version 2.000",
+      "6": "HuXiaoBo-qingniansong-Bold"
+    }
+  },
+  {
+    "id": "274056",
+    "name": "胡晓波骚包体",
+    "metadata": {
+      "0": "(c) Copyright HuXiaoBo 2019",
+      "1": "HuXiaoBao-SaoBao",
+      "2": "Regular",
+      "4": "HuXiaoBao-SaoBao",
+      "5": "Version 2.00 December 23, 2019",
+      "6": "HuXiaoBao-SaoBao"
+    }
+  },
+  {
+    "id": "102415877",
+    "name": "胡晓波刷刷体 Regular",
+    "metadata": {
+      "0": "(c) Copyright HuXiaoBo 2021",
+      "1": "HuXiaoBo-ShuaShuaTi",
+      "2": "Regular",
+      "4": "HuXiaoBo-ShuaShuaTi",
+      "5": "Version 2.000",
+      "6": "HuXiaoBo-ShuaShuaTi"
+    }
+  },
+  {
+    "id": "102415879",
+    "name": "胡晓波影隶简体 Regular",
+    "metadata": {
+      "0": "(c) copyright HuXiaoBo 2020",
+      "1": "HuXiaoBo-YingLi-Jian",
+      "2": "Regular",
+      "4": "HuXiaoBo-YingLi-Jian",
+      "5": "Version 2.00;May 31, 2022;FontCreator 13.0.0.2613 64-bit",
+      "6": "HuXiaoBo-YingLi-Jian"
+    }
+  },
+  {
+    "id": "274058",
+    "name": "胡晓波真帅体",
+    "metadata": {
+      "0": "(c) Copyright HuXiaoBo 2019",
+      "1": "HuXiaoBo-ZhenShuai",
+      "2": "Regular",
+      "4": "HuXiaoBo-ZhenShuai",
+      "5": "Version 2.00 December 23, 2019",
+      "6": "HuXiaoBo-ZhenShuai"
+    }
+  },
+  {
+    "id": "358692",
+    "name": "江西拙楷",
+    "metadata": {
+      "1": "JiangXizhuokai",
+      "2": "Regular",
+      "4": "JiangXizhuokai Regular",
+      "5": "Version 1.000",
+      "6": "JiangXizhuokai-Regular"
+    }
+  },
+  {
+    "id": "48163537",
+    "name": "荆南缘默体",
+    "metadata": {
+      "0": "(c) Copyrighted by Kingnam Typography Studios",
+      "1": "Kingnamtype",
+      "2": "Regular",
+      "4": "Kingnamtype",
+      "5": "Version 0.001;February 4, 2021;FontCreator 11.0.0.2407 32-bit",
+      "6": "Kingnamtype"
+    }
+  },
+  {
+    "id": "193983962",
+    "name": "快去写作业-CJK 常规 Regular",
+    "metadata": {
+      "0": "PartyBoss (派对大魔王) ,All rights reserved.",
+      "1": "CEF Fonts CJK",
+      "2": "Regular",
+      "4": "CEF Fonts CJK",
+      "5": "Release 2.12",
+      "6": "CEF-Fonts-CJK"
+    }
+  },
+  {
+    "id": "402250",
+    "name": "励字侠义简繁",
+    "metadata": {
+      "0": "DreamFont",
+      "1": "Dream-XiaYiGBT",
+      "2": "Regular",
+      "4": "Dream-XiaYiGBT",
+      "5": "Version 1.0  www.DreamFont.cn  DreamFont  Copyright or Agency Shang hai Rui Xian Culture Technology Co., Ltd.",
+      "6": "Dream-XiaYiGBT"
+    }
+  },
+  {
+    "id": "206771",
+    "name": "沐瑶软笔手写体",
+    "metadata": {
+      "0": "Copyright(c) FlexiFont Co.,Ltd.2016",
+      "1": "Muyao-Softbrush",
+      "2": "Regular",
+      "4": "Muyao-Softbrush",
+      "5": "Version 2.20",
+      "6": "Muyao-Softbrush"
+    }
+  },
+  {
+    "id": "206809",
+    "name": "庞门正道粗书体",
+    "metadata": {
+      "0": "(c) Copyright PangMenZhengDao",
+      "1": "PangMenZhengDao-Cu",
+      "2": "Regular",
+      "4": "PangMenZhengDao-Cu",
+      "5": "Version 4.12",
+      "6": "PangMenZhengDao-Cu"
+    }
+  },
+  {
+    "id": "33969323",
+    "name": "庞门正道真贵楷体",
+    "metadata": {
+      "0": "(c) Copyright PangMenZhengDao 2018",
+      "1": "PangZhenGui-PMZD",
+      "2": "Regular",
+      "4": "PangZhenGui-PMZD",
+      "5": "Version 4.12",
+      "6": "PangZhenGui-PMZD"
+    }
+  },
+  {
+    "id": "364011",
+    "name": "清松手写体",
+    "metadata": {
+      "0": "www.writes.com.tw - JasonWriting1",
+      "1": "清松手寫體1",
+      "2": "清松手寫體1",
+      "4": "JasonWriting",
+      "5": "Version 1.016",
+      "6": "JasonWriting"
+    }
+  },
+  {
+    "id": "206810",
+    "name": "锐字真言体免费商用",
+    "metadata": {
+      "0": "For commercial use, please purchase permission to authorize business:\r\nwww.reeji.com QQ:2770851733 Mail:Reejifont@outlook.com\r\n© 2018 by Shang hai Rui Xian Creative Design Co., Ltd..All rights reserved.",
+      "1": "ZhenyanGB",
+      "2": "Regular",
+      "4": "ZhenyanGB Regular",
+      "5": "Version 1.0 www.reeji.com QQ:2770851733 Mail:Reejifont@outlook.com REEJI Shang hai Rui Xian Creative Design Co., Ltd.",
+      "6": "ZhenyanGB-Regular"
+    }
+  },
+  {
+    "id": "364012",
+    "name": "手书体",
+    "metadata": {
+      "0": "(C) Copyright JiaZhiyong 2017",
+      "1": "ShouShuti",
+      "2": "Regular",
+      "4": "ShouShuti",
+      "5": "Version 1.0",
+      "6": "ShouShuti"
+    }
+  },
+  {
+    "id": "48196419",
+    "name": "文鼎新艺体",
+    "metadata": {
+      "0": "(c) Copyright 1994-2015, Arphic Technology Co., Ltd. All rights reserved.",
+      "1": "AR XinYiGB UL",
+      "2": "Regular",
+      "4": "AR XinYiGB UL",
+      "5": "Version 1.00 - This font set is licensed to \"稿定(厦门)科技有限公司；线上编辑平台: 稿定设计(https://www.gaoding.com/)\" only",
+      "6": "ARXinYiGB-UL"
+    }
+  },
+  {
+    "id": "100041498",
+    "name": "小濑字体",
+    "metadata": {
+      "0": "Copyright © 2020 LXGW",
+      "1": "Xiaolai Mono SC",
+      "2": "Regular",
+      "4": "Xiaolai Mono SC",
+      "5": "Version 3.11;December 4, 2020;FontCreator 13.0.0.2613 64-bit",
+      "6": "XiaolaiMonoSC"
+    }
+  },
+  {
+    "id": "194704976",
+    "name": "写意体 Regular",
+    "metadata": {
+      "0": "Copyright 2021 The Zen Kurenaido Project Authors (https://github.com/googlefonts/zen-kurenaido)",
+      "1": "YShi-Written",
+      "2": "Regular",
+      "4": "YShi-Written",
+      "5": "Version 0.002;August 26, 2025;FontCreator 14.0.0.2901 64-bit",
+      "6": "YShiWritten",
+      "8": "Positype",
+      "9": "Yoshimichi Ohira",
+      "11": "https://positype.com",
+      "12": "https://www.zenfont.jp",
+      "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL",
+      "14": "https://scripts.sil.org/OFL"
+    }
+  },
+  {
+    "id": "402254",
+    "name": "演示佛系体",
+    "metadata": {
+      "0": "Copyright © 2019 by keynoteart x QiuYePPT. All rights reserved.",
+      "1": "Slidefu",
+      "2": "Regular",
+      "4": "Slidefu Regular",
+      "5": "Version 1.000",
+      "6": "Slidefu-Regular"
+    }
+  },
+  {
+    "id": "33925852",
+    "name": "演示秋鸿楷",
+    "metadata": {
+      "0": "Copyright © 2020 by Keynoteart. All rights reserved.",
+      "1": "Slideqiuhong",
+      "2": "Regular",
+      "4": "Slideqiuhong Regular",
+      "5": "Version 1.000",
+      "6": "Slideqiuhong-Regular"
+    }
+  },
+  {
+    "id": "354997",
+    "name": "优设标题黑",
+    "metadata": {
+      "0": "(c) Copyright YouShe Network Technology Co., Ltd",
+      "1": "YouSheBiaoTiHei",
+      "2": "Regular",
+      "4": "YouSheBiaoTiHei",
+      "5": "Version 1.00",
+      "6": "YouSheBiaoTiHei"
+    }
+  },
+  {
+    "id": "143161449",
+    "name": "优设标题圆",
+    "metadata": {
+      "0": "(c) Copyright YouShe Network Technology Co., Ltd",
+      "1": "YouSheBiaoTiYuan",
+      "2": "Regular",
+      "4": "YouSheBiaoTiYuan",
+      "5": "Version 1.005",
+      "6": "YouSheBiaoTiYuan"
+    }
+  },
+  {
+    "id": "402257",
+    "name": "有字库龙藏体",
+    "metadata": {
+      "0": "Copyright 2018 The LongCang Project Authors (https://github.com/googlefonts/longcang)",
+      "1": "Long Cang",
+      "2": "Regular",
+      "4": "Long Cang Regular",
+      "5": "Version 2.001",
+      "6": "LongCang-Regular"
+    }
+  },
+  {
+    "id": "194713499",
+    "name": "余繁细柳体 ExtraLight",
+    "metadata": {
+      "0": "Copyright (c) 2024, YuFan",
+      "1": "YuFanXiLiu",
+      "2": "Light",
+      "4": "YuFanXiLiu",
+      "5": "Version 1.0",
+      "6": "YuFanXiLiu",
+      "8": "余繁",
+      "13": "OFL"
+    }
+  },
+  {
+    "id": "206586",
+    "name": "站酷快乐体",
+    "metadata": {
+      "0": "(c) Copyright LuiBingKe 2016",
+      "1": "HappyZcool-2016",
+      "2": "Regular",
+      "4": "HappyZcool-2016",
+      "5": "Version 3.12",
+      "6": "HappyZcool-2016"
+    }
+  },
+  {
+    "id": "364013",
+    "name": "钟齐志莽行书",
+    "metadata": {
+      "0": "Copyright 2018 The ZhiMangXing Project Authors (https://github.com/googlefonts/zhimangxing)",
+      "1": "Zhi Mang Xing",
+      "2": "Regular",
+      "4": "Zhi Mang Xing Regular",
+      "5": "Version 2.001",
+      "6": "ZhiMangXing-Regular"
+    }
+  },
+  {
+    "id": "100015667",
+    "name": "字恋狂深夜简繁",
+    "metadata": {
+      "0": "Copyright Shanghai ZiJi Culture and Art Center(LLP)",
+      "1": "FansType-ShenyeGBT",
+      "2": "Regular",
+      "4": "FansType-ShenyeGBT",
+      "5": "Version 1.0  FansType  Copyright Shanghai ZiJi Culture and Art Center(LLP)",
+      "6": "FansType-ShenyeGBT"
+    }
+  },
+  {
+    "id": "402258",
+    "name": "字体圈欣意冠黑体",
+    "metadata": {
+      "0": "Copyright (C) 2020 by ZouLeWei. All right reserved.",
+      "1": "Fontquan-XinYiGuanHeiTi",
+      "2": "Regular",
+      "4": "Fontquan-XinYiGuanHeiTi Regular",
+      "5": "Version 1.000",
+      "6": "Fontquan-XinYiGuanHeiTi-Regular"
+    }
+  },
+  {
+    "id": "34012442",
+    "name": "字由棒棒体",
+    "metadata": {
+      "0": "(c) Copyright Shanghai Etrump Information Technology Co.",
+      "1": "HelloFont BangBangTi",
+      "2": "Regular",
+      "4": "HelloFont BangBangTi",
+      "5": "Version 1.00",
+      "6": "HelloFont-BangBangTi"
+    }
+  },
+  {
+    "id": "33993913",
+    "name": "字由芳华体",
+    "metadata": {
+      "0": "(c) Copyright Shanghai Etrump Information Technology Co.",
+      "1": "Hellofont FangHuaTi",
+      "2": "Regular",
+      "4": "Hellofont FangHuaTi",
+      "5": "Version 1.00",
+      "6": "Hellofont-FangHuaTi"
+    }
+  },
+  {
+    "id": "33993924",
+    "name": "字由文艺黑",
+    "metadata": {
+      "0": "(c) Copyright Shanghai Etrump Information Technology Co.",
+      "1": "HelloFont WenYiHei",
+      "2": "Regular",
+      "4": "HelloFont WenYiHei",
+      "5": "v1.00",
+      "6": "HelloFont-WenYiHei"
+    }
+  },
+  {
+    "id": "193642122",
+    "name": "字制区喜脉喜欢体",
+    "metadata": {
+      "0": "©Copyright(c)探火（深圳）品牌策划有限公司",
+      "1": "FontQu Smile 常规",
+      "2": "Regular",
+      "4": "字制区 喜脉喜欢体",
+      "5": "1.0",
+      "6": "xihuanti"
+    }
+  },
+  {
+    "id": "33912833",
+    "name": "Fondamento Regular",
+    "metadata": {
+      "0": "Copyright (c) 2011 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved\rFont Name \"Fondamento\"",
+      "1": "Fondamento",
+      "2": "Regular",
+      "4": "Fondamento Regular",
+      "5": "Version 1.000",
+      "6": "Fondamento-Regular"
+    }
+  },
+  {
+    "id": "48208016",
+    "name": "Molle",
+    "metadata": {
+      "0": "Copyright (c) 2011, Sorkin Type Co (www.sorkintype.com)\rwith Reserved Font Name \"Spinnaker\".",
+      "1": "Molle",
+      "2": "Regular",
+      "4": "Molle",
+      "5": "Version 1.001; ttfautohint (v0.92) -l 12 -r 12 -G 200 -x 10 -w \"g\"",
+      "6": "Molle-Regular"
+    }
+  },
+  {
+    "id": "33912837",
+    "name": "Open Sans Bold",
+    "metadata": {
+      "0": "Digitized data copyright © 2010-2011, Google Corporation.",
+      "1": "Open Sans",
+      "2": "Bold",
+      "4": "Open Sans Bold",
+      "5": "Version 1.10",
+      "6": "OpenSans-Bold"
+    }
+  },
+  {
+    "id": "33912836",
+    "name": "Open Sans Regular",
+    "metadata": {
+      "0": "Digitized data copyright © 2010-2011, Google Corporation.",
+      "1": "Open Sans",
+      "2": "Regular",
+      "4": "Open Sans Regular",
+      "5": "Version 1.10",
+      "6": "OpenSans-Regular"
+    }
+  },
+  {
+    "id": "48208017",
+    "name": "Saira Stencil One",
+    "metadata": {
+      "0": "Copyright 2019 The Saira Stencil Project Authors (https://github.com/Omnibus-Type/Saira)",
+      "1": "Saira Stencil One",
+      "2": "Regular",
+      "4": "Saira Stencil One Regular",
+      "5": "Version 1.004",
+      "6": "SairaStencilOne-Regular"
+    }
+  },
+  {
+    "id": "206607",
+    "name": "思源黑体 常规",
+    "metadata": {
+      "0": "Copyright © 2014, 2015 Adobe Systems Incorporated (http://www.adobe.com/), with Reserved Font Name 'Source'.",
+      "1": "Source Han Sans SC Regular",
+      "2": "Regular",
+      "4": "Source Han Sans SC Regular",
+      "5": "Version 1.004;PS 1.004;hotconv 1.0.82;makeotf.lib2.5.63406",
+      "6": "SourceHanSansSC-Regular"
+    }
+  },
+  {
+    "id": "193996145",
+    "name": "StarLoveMarker Regular",
+    "metadata": {
+      "0": "FULLY FREE to USE.",
+      "1": "StarLoveMarker",
+      "2": "Regular",
+      "4": "StarLoveMarker",
+      "5": "Version 1",
+      "6": "StarLoveMarker"
+    }
+  },
+  {
+    "id": "193988043",
+    "name": "StarLovePencil Regular",
+    "metadata": {
+      "0": "FULLY FREE to USE.",
+      "1": "StarLovePencil",
+      "2": "Regular",
+      "4": "StarLovePencil",
+      "5": "Version 2",
+      "6": "StarLovePencil"
+    }
+  }
+]

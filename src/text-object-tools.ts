@@ -9,7 +9,7 @@ export function registerTextObjectTools(editor: Editor): void {
   const notify = () => { editor.nodeChanged(); editor.dispatch('ResizeContent'); editor.dispatch('change'); };
   editor.on('BeforeExecCommand', event => {
     if (!selectionHasLockedText(editor)) return;
-    const allowed = new Set(['mcefocus', 'undo', 'redo', 'copy', 'mcecopy', 'selectall', 'textduplicate', 'texttogglelock', 'mcepreview', 'mceprint', 'mcefullscreen', 'mcesave', 'mcecodeeditor']);
+    const allowed = new Set(['mcefocus', 'undo', 'redo', 'copy', 'mcecopy', 'selectall', 'textduplicate', 'texttogglelock', 'textsettings', 'textsettingspanel', 'imagesettingspanel', 'mcepreview', 'mceprint', 'mcefullscreen', 'mcesave', 'mcecodeeditor']);
     if (!allowed.has(event.command.toLowerCase())) { event.preventDefault(); event.stopImmediatePropagation(); }
   });
   editor.addCommand('TextDuplicate', () => {
@@ -48,5 +48,4 @@ export function registerTextObjectTools(editor: Editor): void {
     text: '锁定', tooltip: '锁定 / 解锁文本框', onAction: () => editor.execCommand('TextToggleLock'),
     onSetup: api => { const update = () => { const box = currentTextBox(editor); api.setEnabled(!!box && !editor.mode.isReadOnly()); api.setActive(isTextLocked(box)); api.setText(isTextLocked(box) ? '解锁' : '锁定'); }; update(); editor.on(events, update); return () => editor.off(events, update); }
   });
-  editor.ui.registry.addGroupToolbarButton('textgroupobject', { text: '对象', tooltip: '文字复制与锁定', items: 'textduplicate textlock' });
 }

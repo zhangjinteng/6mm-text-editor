@@ -1,3 +1,4 @@
+import { parseShadowColor } from './text-shadow';
 import { copyFills, fillNames, fillSwatch, newFill, type FillLayer, type FillStop, type FillType } from './text-fill';
 
 const eye = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -88,7 +89,13 @@ export function createFillEditor(doc: Document, initial: FillLayer[], callbacks:
     const stopKey = field.dataset.stopKey || field.dataset.stopRange || field.dataset.stopColor;
     const numeric = field.hasAttribute('data-number') || field.type === 'range';
     const value = field.type === 'checkbox' ? field.checked : numeric ? (field.value.trim() ? Number(field.value) : NaN) : field.value;
-    if (fillKey === 'type') { invalidateUpload(); layer.type = (value === 'none' ? 'original' : value) as FillType; renderProperties(); }
+    if (fillKey === 'color' || stopKey === 'color') {
+      const target = stopKey ? stop() : layer; if (!target) return;
+      const parsed = parseShadowColor(field.value, doc);
+      target.color = parsed?.opacity !== undefined ? parsed.color : field.value;
+      if (parsed?.opacity !== undefined) target.opacity = parsed.opacity;
+    }
+    else if (fillKey === 'type') { invalidateUpload(); layer.type = (value === 'none' ? 'original' : value) as FillType; renderProperties(); }
     else if (fillKey) { if (fillKey === 'image') invalidateUpload(); Object.assign(layer, { [fillKey]: value }); if (fillKey === 'gradient') renderProperties(); }
     else if (stopKey && stop()) Object.assign(stop()!, { [stopKey]: value });
     else return;

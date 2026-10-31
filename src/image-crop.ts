@@ -2,10 +2,15 @@ import type { Editor } from 'tinymce';
 import './image-crop.css';
 import { imageGeometry } from './image-geometry';
 
-type Crop = { x: number; y: number; width: number; height: number };
+export type Crop = { x: number; y: number; width: number; height: number };
+export interface CropDraftRequest {
+  image: HTMLImageElement; source: string; width: number; height: number; crop: Crop;
+  apply: (crop: Crop, width: number, height: number) => void;
+}
+export const cropViewBox = (crop: Crop) => `inset(${crop.y * 100}% ${Math.max(0, 1 - crop.x - crop.width) * 100}% ${Math.max(0, 1 - crop.y - crop.height) * 100}% ${crop.x * 100}%)`;
 const full = (): Crop => ({ x: 0, y: 0, width: 1, height: 1 });
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
-function readCrop(image: HTMLImageElement): Crop {
+export function readCrop(image: HTMLImageElement): Crop {
   try {
     const crop = JSON.parse(image.getAttribute('data-image-crop') || 'null');
     if (crop && ['x', 'y', 'width', 'height'].every(key => Number.isFinite(crop[key])) &&
@@ -19,25 +24,25 @@ export function registerImageCrop(editor: Editor): void {
   let disposing = false;
   editor.on('remove', () => { disposing = true; closeDialog?.(); });
   editor.ui.registry.addIcon('image-crop', '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14" fill="none" stroke="currentColor" stroke-width="2"/></svg>');
-  editor.ui.registry.addButton('imagecrop', {
-    icon: 'image-crop', tooltip: '裁剪图片',
-    onAction: () => {
+  editor.ui.registry.addButton('imagecrop', { icon: 'image-crop', tooltip: '裁剪图片', onAction: () => open() });
+  editor.addCommand('mceImageCrop', (_ui, draft?: CropDraftRequest) => open(draft));
+  function open(draft?: CropDraftRequest) {
       if (editor.mode.isReadOnly() || closeDialog) return;
       const node = editor.selection.getNode();
-      const image = node.closest('img') || node.querySelector('img');
+      const image = draft?.image ?? node.closest('img') ?? node.querySelector('img');
       if (!image || !editor.getBody().contains(image)) return;
-      if (image.getAttribute('data-image-locked') === 'true') {
+      if (!draft && image.getAttribute('data-image-locked') === 'true') {
         editor.notificationManager.open({ text: '请先在图片设置中解锁，再裁剪图片。', type: 'info' }); return;
       }
       if (!CSS.supports('object-view-box', 'inset(0%)')) {
         editor.notificationManager.open({ text: '当前浏览器不支持图片裁剪，请使用新版 Chrome 或 Edge。', type: 'warning' });
         return;
       }
-      const bounds = imageGeometry(image);
-      if (!bounds.width || !bounds.height || !image.complete || !image.naturalWidth) {
+      const bounds = draft ?? imageGeometry(image);
+      if (!bounds.width || !bounds.height || (!draft && (!image.complete || !image.naturalWidth))) {
         editor.notificationManager.open({ text: '图片尚未加载完成，请稍后重试。', type: 'warning' }); return;
       }
-      const previous = readCrop(image);
+      const previous = draft?.crop ?? readCrop(image);
       const baseWidth = bounds.width / previous.width;
       const baseHeight = bounds.height / previous.height;
       const bookmark = editor.selection.getBookmark(2, true);
@@ -52,7 +57,7 @@ export function registerImageCrop(editor: Editor): void {
       <div class="crop-footer"><span data-size></span><div><button type="button" data-cancel>取消</button><button type="button" data-apply>应用裁剪</button></div></div>`;
       const stage = dialog.querySelector<HTMLElement>('.crop-stage')!;
       const preview = dialog.querySelector<HTMLImageElement>('.crop-preview')!;
-      preview.src = image.currentSrc || image.src;
+      preview.src = draft?.source ?? (image.currentSrc || image.src);
       preview.referrerPolicy = image.referrerPolicy as ReferrerPolicy;
       const selection = dialog.querySelector<HTMLElement>('.crop-selection')!;
       const fields = dialog.querySelectorAll<HTMLInputElement>('[data-field]');
@@ -73,7 +78,7 @@ export function registerImageCrop(editor: Editor): void {
       };
       const close = () => {
         release(); window.removeEventListener('resize', resize); dialog.remove(); closeDialog = undefined;
-        if (!disposing && !editor.removed && image.isConnected) {
+        if (!draft && !disposing && !editor.removed && image.isConnected) {
           editor.focus(); editor.selection.moveToBookmark(bookmark); editor.nodeChanged();
         }
       };
@@ -130,6 +135,7 @@ export function registerImageCrop(editor: Editor): void {
       }));
       dialog.querySelector('[data-apply]')!.addEventListener('click', () => {
         if (!image.isConnected || editor.mode.isReadOnly()) { close(); return; }
+        if (draft) { close(); draft.apply({ ...crop }, baseWidth * crop.width, baseHeight * crop.height); return; }
         editor.undoManager.transact(() => {
           const width = baseWidth * crop.width, height = baseHeight * crop.height;
           editor.dom.setAttrib(image, 'data-image-crop', JSON.stringify(crop));
@@ -142,6 +148,5 @@ export function registerImageCrop(editor: Editor): void {
       });
       doc.body.append(dialog); resize(); update(); dialog.showModal();
       window.addEventListener('resize', resize);
-    }
-  });
+  }
 }

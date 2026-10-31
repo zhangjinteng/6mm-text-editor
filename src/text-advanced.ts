@@ -10,6 +10,7 @@ const renderKeys = new WeakMap<HTMLElement, string>();
 const sourceSelector = ':scope > [data-text-source]';
 export const advancedTextStyles = `
 ${textBackgroundStyles}
+[data-text-draggable][data-text-quote=true]{border-inline-start:3px solid #147d64;padding-inline-start:16px}
 [data-text-source]{display:block;min-height:1em;white-space:pre-wrap;overflow-wrap:anywhere}
 [data-text-render]{display:block;line-height:0;pointer-events:none;user-select:none;text-shadow:none}
 [data-text-render] > svg{display:block;width:100%;height:auto;overflow:visible}

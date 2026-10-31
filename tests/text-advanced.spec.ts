@@ -4,15 +4,16 @@ declare global { interface Window { tinymce: { activeEditor: Editor } } }
 const frame=(page:Page)=>page.frameLocator('.tox-edit-area iframe');
 const original=(page:Page)=>frame(page).locator('body > p > #advanced');
 async function tool(page:Page,name:string){
- if (['textfill','textcurve'].includes(name)) {
-  const settings=page.locator('.tox-pop:visible [data-mce-name="textsettings"]');
-  if (await settings.isDisabled()) return settings;
-  await settings.click();return page.getByRole('dialog',{name:'文字设置',exact:true}).getByRole('tab',{name:name==='textfill'?'填充':'变形',exact:true});
- }
- const panel=page.locator('[data-toolbar-group="textgroupobject"]');if(!await panel.isVisible())await page.locator('.tox-pop:visible [data-mce-name="textgroupobject"]').click();await expect(panel).toBeVisible();return panel.locator(`[data-mce-name="${name}"]`);
+ const d=page.getByRole('dialog',{name:'文字设置',exact:true});
+ if (!await d.isVisible()) await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+ if (['textfill','textcurve'].includes(name)) return d.getByRole('tab',{name:name==='textfill'?'填充':'变形',exact:true});
+ await d.getByRole('tab',{name:'对象',exact:true}).click();
+ if (name==='textduplicate') return d.getByRole('button',{name:'创建文字副本',exact:true});
+ const lock=d.getByLabel('锁定文本框',{exact:true});await lock.setChecked(!await lock.isChecked());
+ return d.getByRole('button',{name:'应用设置',exact:true});
 }
 async function fillDialog(page:Page){await(await tool(page,'textfill')).click();return page.getByRole('dialog',{name:'文字设置',exact:true});}
-async function curve(page:Page,direction:string,strength='60'){await(await tool(page,'textcurve')).click();const d=page.getByRole('dialog',{name:'文字设置',exact:true});await d.getByRole('button',{name:direction==='up'?'上拱':direction==='down'?'下弯':'无变形',exact:true}).click();if(direction!=='none')await d.getByRole('combobox',{name:'多行处理',exact:true}).selectOption('join');if(direction!=='none')await d.getByRole('textbox',{name:'变形程度',exact:true}).fill(strength);await d.getByRole('button',{name:'应用设置',exact:true}).click();}
+async function curve(page:Page,direction:string,strength='60'){await(await tool(page,'textcurve')).click();const d=page.getByRole('dialog',{name:'文字设置',exact:true});await d.getByRole('button',{name:direction==='up'?'上拱':direction==='down'?'下弯':'无变形',exact:true}).click();if(direction!=='none')await d.getByRole('combobox',{name:'多行处理',exact:true}).selectOption('join');if(direction!=='none')await d.getByRole('textbox',{name:'变形程度',exact:true}).fill(strength);await d.getByRole('button',{name:'应用设置',exact:true}).click();await expect(d).toBeHidden();}
 async function gradient(page:Page){const d=await fillDialog(page);await d.getByRole('combobox',{name:'填充类型',exact:true}).selectOption('gradient');await d.getByRole('textbox',{name:'色标颜色',exact:true}).fill('#ef4444');await d.getByRole('slider',{name:'渐变色标 2',exact:true}).click();await d.getByRole('textbox',{name:'色标颜色',exact:true}).fill('#2563eb');await d.getByRole('textbox',{name:'渐变角度（0—360°）',exact:true}).fill('90');await d.getByRole('button',{name:'应用设置',exact:true}).click();}
 test.beforeEach(async({page})=>{await page.goto('/');await page.waitForFunction(()=>window.tinymce?.activeEditor?.initialized);await page.evaluate(()=>{const e=window.tinymce.activeEditor;e.setContent('<p><span id="advanced" data-text-draggable="true" style="position:absolute;left:140px;top:100px;width:420px;font-size:38px;font-family:Arial;line-height:1.5"><strong style="color:#147d64">弧形文字测试</strong><br>CURVED TEXT</span></p>');e.undoManager.clear();e.undoManager.add();});await original(page).click();});
 test('gradient fill preserves source formatting, is undoable and survives save/reload and static preview',async({page})=>{

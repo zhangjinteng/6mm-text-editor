@@ -11,15 +11,15 @@ async function dragText(page: Page, text: Locator, dx: number, dy: number, cance
   await page.mouse.up();
 }
 
-test('文字自由拖动保留格式、支持撤销取消、保存和恢复正文', async ({ page }) => {
+test('文字直接拖动保留格式、支持撤销取消和保存，工具栏不再显示拖动开关', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   await page.evaluate(() => {
     const e = window.tinymce.activeEditor;
-    e.setContent('<p>前面<strong style="color: #e03e2d">可拖动文字</strong>后面</p>');
+    e.setContent('<p><strong style="color: #e03e2d">可拖动文字</strong></p>');
     e.focus(); e.selection.select(e.getBody().querySelector('strong')!, true); e.fire('mouseup');
   });
-  await page.locator('.tox-pop [data-mce-name="textdrag"]').click();
+  await page.frameLocator('.tox-edit-area iframe').locator('p').click({ position: { x: 20, y: 10 } });
   const body = page.frameLocator('.tox-edit-area iframe').locator('body');
   const text = body.locator('[data-text-draggable]');
   await expect(text).toHaveText('可拖动文字');
@@ -43,20 +43,22 @@ test('文字自由拖动保留格式、支持撤销取消、保存和恢复正�
   const saved = (await text.boundingBox())!;
   expect(saved.x).toBeCloseTo(after.x,0); expect(saved.y).toBeCloseTo(after.y,0);
   await text.click();
-  await page.locator('.tox-pop [data-mce-name="textdrag"]').click();
-  await expect(text).toHaveCount(0);
-  await expect(body.locator('p')).toHaveText('前面可拖动文字后面');
-  await expect(body.locator('strong')).toHaveCSS('color','rgb(224, 62, 45)');
+  await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toHaveCount(0);
+  await expect(page.locator('.tox-pop [data-mce-name="textsettings"]')).toBeVisible();
+  await text.dblclick();
+  await page.keyboard.press('End'); await page.keyboard.down('Shift'); await page.keyboard.press('Home'); await page.keyboard.up('Shift');
+  await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toHaveCount(0);
+  await expect(page.locator('.tox-pop [data-mce-name="textsettings"]')).toBeVisible();
 });
 
-test('动画文字拖动后仍能播放，恢复正文保留动画', async ({ page }) => {
+test('动画文字直接拖动后仍能播放', async ({ page }) => {
   await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   await page.evaluate(() => {
     const e=window.tinymce.activeEditor;
     e.setContent('<p><span data-text-animation="pulse" style="animation-duration:2s;animation-iteration-count:infinite">动画文字</span></p>');
     e.focus(); e.selection.select(e.getBody().querySelector('p')!,true); e.fire('mouseup');
   });
-  await page.locator('.tox-pop [data-mce-name="textdrag"]').click();
+  await page.frameLocator('.tox-edit-area iframe').locator('p').click({ position: { x: 20, y: 10 } });
   const body=page.frameLocator('.tox-edit-area iframe').locator('body');
   const text=body.locator('[data-text-draggable]');
   await expect(text).not.toHaveAttribute('data-text-animation', 'pulse');
@@ -65,9 +67,7 @@ test('动画文字拖动后仍能播放，恢复正文保留动画', async ({ pa
   await dragText(page, text, 100, 80);
   await expect(text).toHaveCSS('position','absolute');
   await expect(text.locator('[data-text-animation]')).toHaveCSS('animation-name','pulse');
-  await text.click(); await page.locator('.tox-pop [data-mce-name="textdrag"]').click();
-  await expect(text).toHaveCount(0);
-  await expect(body.locator('[data-text-animation]')).toHaveCSS('animation-name','pulse');
+  await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toHaveCount(0);
 });
 
 test('首次拖动脱离正文后，文字在编辑区下方仍完整可见和可点击', async ({ page }) => {
@@ -93,29 +93,6 @@ test('首次拖动脱离正文后，文字在编辑区下方仍完整可见和�
   await page.getByRole('navigation',{name:'文档视图'}).getByRole('button',{name:'预览',exact:true}).click();
   const preview=page.frameLocator('iframe[title="文档预览"]').locator('[data-text-draggable]');
   expect(await preview.evaluate(e=>e.getBoundingClientRect().bottom<=e.ownerDocument.body.getBoundingClientRect().bottom)).toBe(true);
-});
-
-test('重复框选整段切换拖动不会累积 span，并能清除旧的嵌套拖动层', async ({ page }) => {
-  await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
-  await page.evaluate(() => window.tinymce.activeEditor.setContent('<p><strong style="color:#e03e2d">重复切换</strong></p>'));
-  const body = page.frameLocator('.tox-edit-area iframe').locator('body');
-  const toggle = async () => {
-    await page.evaluate(() => {
-      const e = window.tinymce.activeEditor;
-      e.focus(); e.selection.select(e.getBody().querySelector('p')!,true); e.fire('mouseup');
-    });
-    await page.locator('.tox-pop [data-mce-name="textdrag"]').click();
-  };
-  for (let i=0;i<8;i++) {
-    await toggle();
-    await expect(body.locator('[data-text-draggable]')).toHaveCount(i%2===0 ? 1 : 0);
-    await expect(body.locator('span span')).toHaveCount(0);
-  }
-  await page.evaluate(() => window.tinymce.activeEditor.setContent('<p><span data-text-draggable="true"><span data-text-draggable="true"><span data-text-animation="pulse"><strong style="color:#e03e2d">旧嵌套文字</strong></span></span></span></p>'));
-  await toggle();
-  await expect(body.locator('[data-text-draggable]')).toHaveCount(0);
-  await expect(body.locator('[data-text-animation="pulse"]')).toHaveText('旧嵌套文字');
-  await expect(body.locator('strong')).toHaveCSS('color','rgb(224, 62, 45)');
 });
 
 test('拖动后双击输入及框选文字不再移动对象，手柄不保存或导出', async ({ page }) => {

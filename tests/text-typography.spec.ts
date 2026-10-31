@@ -14,10 +14,10 @@ async function selectCharacters(page: Page, text: string) {
     }
   }, text);
 }
-async function layout(page: Page, name: string) {
-  const panel = page.locator('[data-toolbar-group="textgrouplayout"]');
-  if (!await panel.isVisible()) await page.locator('.tox-pop:visible [data-mce-name="textgrouplayout"]').click();
-  await expect(panel).toBeVisible(); return panel.locator(`[data-mce-name="${name}"]`);
+async function layout(page: Page) {
+  await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  const d = page.getByRole('dialog', { name: '文字设置', exact: true });
+  await d.getByRole('tab', { name: '排版', exact: true }).click(); return d;
 }
 test.beforeEach(async ({ page }) => {
   await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
@@ -28,11 +28,14 @@ test('object fonts, toggles, colors and highlighting apply to the whole box, pre
   await box.click(); const bounds = (await box.boundingBox())!;
   await (await textTool(page, 'bold')).click();
   expect(await box.evaluate(el => (() => { const w=el.ownerDocument.createTreeWalker(el,NodeFilter.SHOW_TEXT); for(let n=w.nextNode();n;n=w.nextNode()) if(parseInt(getComputedStyle(n.parentElement!).fontWeight)<600) return false; return true; })())).toBe(true);
-  await page.locator('.tox-pop:visible input').fill('28px'); await page.locator('.tox-pop:visible input').press('Enter');
+  await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  const settings = page.getByRole('dialog', { name: '文字设置', exact: true });
+  await settings.getByRole('textbox', { name: '字号', exact: true }).fill('28');
+  await settings.getByRole('textbox', { name: '文字颜色', exact: true }).fill('#3598db');
+  await settings.getByRole('textbox', { name: '背景颜色', exact: true }).fill('#f1c40f');
+  await settings.getByRole('button', { name: '应用设置', exact: true }).click();
   const fonts = await box.evaluate(el => { const w=el.ownerDocument.createTreeWalker(el,NodeFilter.SHOW_TEXT); const sizes=[]; for(let n=w.nextNode();n;n=w.nextNode()) sizes.push(getComputedStyle(n.parentElement!).fontSize); return sizes; });
   expect(new Set(fonts)).toEqual(new Set(['28px']));
-  await (await textTool(page, 'forecolor-chevron')).click(); await page.locator('[data-mce-color="#3598DB"]').click();
-  await (await textTool(page, 'backcolor-chevron')).click(); await page.locator('[data-mce-color="#F1C40F"]').click();
   expect(await box.evaluate(el => { const w=el.ownerDocument.createTreeWalker(el,NodeFilter.SHOW_TEXT); const colors=[]; for(let n=w.nextNode();n;n=w.nextNode()) colors.push(getComputedStyle(n.parentElement!).color); return colors.every(v=>v==='rgb(53, 152, 219)'); })).toBe(true);
   expect(await box.evaluate(el=>{const w=el.ownerDocument.createTreeWalker(el,NodeFilter.SHOW_TEXT);for(let n=w.nextNode();n;n=w.nextNode()){let p=n.parentElement;let colored=false;while(p&&el.contains(p)){if(getComputedStyle(p).backgroundColor==='rgb(241, 196, 15)'){colored=true;break;}p=p.parentElement;}if(!colored)return false;}return true;})).toBe(true);
   const now = (await box.boundingBox())!; expect(now.x).toBeCloseTo(bounds.x,0); expect(now.y).toBeCloseTo(bounds.y,0); expect(now.width).toBeCloseTo(bounds.width,0);
@@ -58,12 +61,13 @@ test('editing range changes only selected characters, and a collapsed caret styl
 test('layout controls style the box, spacing dialog handles mixed text, save/reload preserves formatting', async ({ page }) => {
   const frame = page.frameLocator('.tox-edit-area iframe'); const box = frame.locator('[data-text-draggable]');
   await box.click(); const before = (await box.boundingBox())!;
-  await (await layout(page,'textaligncenter')).click(); await expect(box).toHaveCSS('text-align','center');
+  const dialog = await layout(page);
+  await dialog.getByLabel('文字对齐', { exact: true }).selectOption('center');
+  await dialog.getByLabel('行距倍数', { exact: true }).fill('2');
+  await dialog.getByLabel('字间距（px）', { exact: true }).fill('2');
   await page.screenshot({path:'screenshots/text-typography-controls.png'});
-  await (await layout(page,'textlineheight')).click(); await page.getByRole('menuitemcheckbox',{name:'2 倍',exact:true}).click();
-  await expect(box).toHaveCSS('line-height','40px');
-  await (await layout(page,'textspacing')).click();
-  const dialog=page.getByRole('dialog',{name:'字间距',exact:true}); await dialog.getByRole('textbox').fill('2'); await dialog.getByRole('button',{name:'应用',exact:true}).click();
+  await dialog.getByRole('button',{name:'应用设置',exact:true}).click();
+  await expect(box).toHaveCSS('text-align','center');await expect(box).toHaveCSS('line-height','40px');
   const now=(await box.boundingBox())!;expect(now.x).toBeCloseTo(before.x,0);expect(now.width).toBeCloseTo(before.width,0);
   await expect(frame.locator('#neighbor')).not.toHaveCSS('text-align','center');
   await page.getByRole('button',{name:'保存文档',exact:true}).click(); await page.reload(); await page.waitForFunction(()=>window.tinymce?.activeEditor?.initialized);
@@ -74,9 +78,8 @@ test('mixed spacing is explicit, cancel leaves content unchanged, and font famil
   const frame=page.frameLocator('.tox-edit-area iframe');const box=frame.locator('[data-text-draggable]');
   await page.evaluate(()=>{const e=window.tinymce.activeEditor;e.getBody().querySelector<HTMLElement>('[data-text-draggable] > span')!.style.letterSpacing='4px';});
   await box.click(); const before=await page.evaluate(()=>window.tinymce.activeEditor.getContent());
-  await (await layout(page,'textspacing')).click();
-  const dialog=page.getByRole('dialog',{name:'字间距',exact:true});
-  await expect(dialog.getByRole('textbox')).toHaveValue('');await expect(dialog.getByRole('textbox')).toHaveAttribute('placeholder','混合，请输入新值');
+  const dialog=await layout(page);
+  await expect(dialog.getByLabel('字间距（px）', { exact: true })).toHaveValue('');await expect(dialog.getByLabel('字间距（px）', { exact: true })).toHaveAttribute('placeholder','混合，请输入新值');
   await dialog.getByRole('button',{name:'取消',exact:true}).click();expect(await page.evaluate(()=>window.tinymce.activeEditor.getContent())).toBe(before);
   await page.evaluate(()=>window.tinymce.activeEditor.execCommand('FontName',false,'Arial'));
   expect(await box.evaluate(el=>{const w=el.ownerDocument.createTreeWalker(el,NodeFilter.SHOW_TEXT);for(let n=w.nextNode();n;n=w.nextNode())if(!getComputedStyle(n.parentElement!).fontFamily.includes('Arial'))return false;return true;})).toBe(true);

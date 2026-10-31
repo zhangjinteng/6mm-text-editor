@@ -1,6 +1,3 @@
-import type { Editor } from 'tinymce';
-import { selectionHasLockedText } from './text-box-state';
-import { openAnimationPicker, type AnimationPlayback } from './animation-picker';
 import license from 'animate.css/LICENSE?raw';
 import bounce from 'animate.css/source/attention_seekers/bounce.css?raw';
 import flash from 'animate.css/source/attention_seekers/flash.css?raw';
@@ -16,7 +13,7 @@ import jello from 'animate.css/source/attention_seekers/jello.css?raw';
 import heartBeat from 'animate.css/source/attention_seekers/heartBeat.css?raw';
 
 export const textAnimations = { bounce, flash, pulse, rubberBand, shakeX, shakeY, headShake, swing, tada, wobble, jello, heartBeat };
-type AnimationName = keyof typeof textAnimations;
+export type AnimationName = keyof typeof textAnimations;
 
 // Keep the official keyframes and per-effect timing, scoped to persisted text attributes.
 export const animationStyles = `
@@ -28,69 +25,44 @@ export const animationStyles = `
   animation-fill-mode: both;
 }
 ${Object.entries(textAnimations).map(([name, css]) =>
-  css.replaceAll(`.${name}`, `[data-text-animation="${name}"]`)).join('\n')}
+  css.replaceAll(`.${name}`, `[data-text-animation="${name}"]:not([data-text-draggable]), [data-text-animation="${name}"][data-text-draggable] > :is([data-text-source], [data-text-render], [data-text-background-render])`)).join('\n')}
+/* The positioning box stays still while its source and generated layers animate together. */
+[data-text-draggable][data-text-animation] > :is([data-text-source], [data-text-render], [data-text-background-render]) {
+  --animate-duration: inherit;
+  animation-duration: inherit;
+  animation-iteration-count: inherit;
+  animation-fill-mode: both;
+}
 @media print, (prefers-reduced-motion: reduce) {
-  [data-text-animation] { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+  [data-text-animation], [data-text-draggable][data-text-animation] > :is([data-text-source], [data-text-render], [data-text-background-render]) { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
 }
 `;
 
-export function registerTextAnimations(editor: Editor): void {
-  let closePicker: (() => void) | undefined;
-  let disposing = false;
-  editor.on('remove', () => { disposing = true; closePicker?.(); });
-  editor.on('init', () => {
-    editor.formatter.register('textanimation', {
-      inline: 'span',
-      attributes: {
-        'data-text-animation': '%value', 'data-animation-duration': '%duration',
-        'data-animation-loop': '%loop', 'data-animation-total': '%total'
-      },
-      styles: { animationDuration: '%duration', animationIterationCount: '%iterations' },
-      onmatch: (node: Node) => node.nodeType === 1 && (node as Element).hasAttribute('data-text-animation'),
-      remove_similar: true
-    });
-  });
-
-  editor.ui.registry.addButton('textanimation', {
-    text: '动画', tooltip: '文字动画',
-    onAction: () => {
-      if (editor.mode.isReadOnly() || selectionHasLockedText(editor)) return;
-      if (closePicker) { closePicker(); return; }
-      const bookmark = editor.selection.getBookmark(2, true);
-      const node = editor.dom.getParent(editor.selection.getNode(), '[data-text-animation]');
-      const selected = node?.getAttribute('data-text-animation') as AnimationName | undefined;
-      const playback: AnimationPlayback = {
-        duration: parseFloat(node?.getAttribute('data-animation-duration') || '1'),
-        loop: node?.getAttribute('data-animation-loop') === 'true',
-        total: Number(node?.getAttribute('data-animation-total') || 0)
-      };
-      const anchor = editor.getContainer().ownerDocument.querySelector<HTMLElement>('.tox-pop [data-mce-name="textanimation"]');
-      if (!anchor) return;
-      closePicker = openAnimationPicker(anchor, Object.keys(textAnimations), selected, playback, (name, settings) => {
-        if (editor.mode.isReadOnly() || selectionHasLockedText(editor)) return;
-        editor.focus();
-        editor.selection.moveToBookmark(bookmark);
-        editor.undoManager.transact(() => {
-          editor.formatter.remove('textanimation');
-          if (name) editor.formatter.apply('textanimation', {
-            value: name, duration: `${settings.duration}s`, loop: String(settings.loop), total: String(settings.total),
-            iterations: settings.loop ? (settings.total > 0 ? String(settings.total / settings.duration) : 'infinite') : '1'
-          });
-        });
-        for (const element of editor.getBody().querySelectorAll<HTMLElement>('[data-text-animation]')) {
-          if (editor.selection.getRng().intersectsNode(element)) {
-            element.getAnimations().forEach((animation) => { animation.cancel(); animation.play(); });
-          }
-        }
-        editor.nodeChanged();
-      }, (restoreFocus) => {
-        closePicker = undefined;
-        if (restoreFocus && !disposing && !editor.removed) {
-          editor.focus();
-          editor.selection.moveToBookmark(bookmark);
-          editor.nodeChanged();
-        }
-      }, animationStyles);
-    }
-  });
+export interface TextAnimation { name: AnimationName | ''; duration: number; loop: boolean; total: number }
+export const defaultAnimation: TextAnimation = { name: '', duration: 1, loop: false, total: 0 };
+export function readAnimation(box: HTMLElement): TextAnimation {
+  const node = box.matches('[data-text-animation]') ? box : box.querySelector<HTMLElement>('[data-text-animation]');
+  if (!node || !Object.hasOwn(textAnimations, node.dataset.textAnimation ?? '')) return { ...defaultAnimation };
+  const duration = parseFloat(node.dataset.animationDuration || node.style.animationDuration || '1');
+  const iterations = node.style.animationIterationCount;
+  const total = Number(node.dataset.animationTotal ?? (iterations && iterations !== 'infinite' ? Number(iterations) * duration : 0));
+  return { name: node.dataset.textAnimation as AnimationName, duration, loop: node.dataset.animationLoop === 'true' || (!node.dataset.animationLoop && (iterations === 'infinite' || Number(iterations) > 1)), total };
+}
+export function validateAnimation(value: TextAnimation): string {
+  if (value.name && !Object.hasOwn(textAnimations, value.name)) return '请选择有效的动画效果。';
+  if (!Number.isFinite(value.duration) || value.duration < .1 || value.duration > 60) return '每轮时长请输入 0.1—60 秒。';
+  if (!Number.isFinite(value.total) || value.total < 0 || value.total > 3600) return '循环总时长请输入 0—3600 秒。';
+  return '';
+}
+export function writeAnimation(box: HTMLElement, value: TextAnimation) {
+  // Replace legacy inline animations without touching their rich text formatting.
+  for (const node of [box, ...box.querySelectorAll<HTMLElement>('[data-text-animation]')]) {
+    for (const key of ['textAnimation', 'animationDuration', 'animationLoop', 'animationTotal']) delete node.dataset[key];
+    for (const key of ['animation', 'animation-name', 'animation-duration', 'animation-iteration-count', 'animation-fill-mode']) node.style.removeProperty(key);
+    node.removeAttribute('data-mce-style');
+  }
+  if (!value.name) return;
+  Object.assign(box.dataset, { textAnimation: value.name, animationDuration: `${value.duration}s`, animationLoop: String(value.loop), animationTotal: String(value.total) });
+  box.style.animationDuration = `${value.duration}s`;
+  box.style.animationIterationCount = value.loop ? (value.total > 0 ? String(value.total / value.duration) : 'infinite') : '1';
 }

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import type { FillLayer } from '../src/text-fill';
 declare global { interface Window { tinymce: { activeEditor: Editor } } }
 const box = (p: Page) => p.frameLocator('.tox-edit-area iframe').locator('#fill-text');
-const preview = (p: Page) => p.frameLocator('iframe[title="文字效果预览"]').locator('body > [data-text-draggable]');
+const preview = (p: Page) => p.frameLocator('iframe[title="文字效果预览"]').locator('body [data-text-draggable]');
 const d = (p: Page) => p.getByRole('dialog', { name: '文字设置', exact: true });
 async function open(p: Page) { await box(p).click(); await p.locator('.tox-pop:visible [data-mce-name="textsettings"]').click(); await d(p).getByRole('tab', { name: '填充', exact: true }).click(); }
 const field = (p: Page, name: string) => d(p).getByRole('textbox', { name, exact: true });

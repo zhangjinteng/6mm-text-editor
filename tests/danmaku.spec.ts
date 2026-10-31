@@ -27,6 +27,10 @@ async function start(page: Page) {
   const commands = await mockPlatform(page);
   await page.goto('/');
   await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await page.getByRole('button', { name: '收起画布配置', exact: true }).click();
+  await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).not.toHaveClass('selected');
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
+  await page.getByRole('button', { name: '直播弹幕', exact: true }).click();
   await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).toHaveClass('selected');
   await page.getByRole('button', { name: '连接直播间' }).click();
   await expect(page.locator('.live-state strong')).toHaveText('已连接');
@@ -360,26 +364,31 @@ test('弹幕四角缩放、取消、撤销重做及保存刷新，与图片复�
   await expect(preview).toHaveCSS('width', `${saved.width}px`); await expect(preview).toHaveCSS('height', `${saved.height}px`);
 });
 
-test('弹幕浮动工具栏左右居中对齐，坐标持久化且不改变消息文字对齐', async ({ page }) => {
+test('弹幕设置左右居中对齐，坐标持久化且不改变消息文字对齐', async ({ page }) => {
   await start(page);
   await openSource(page, '<p id="alignment-reference">弹幕对齐测试</p><div data-danmaku-id="aligned" data-danmaku-source="current" style="width:200px;height:120px;background:#ddd"></div>');
   const frame = page.frameLocator('.tox-edit-area iframe');
   const region = frame.locator('[data-danmaku-id="aligned"]');
+  await region.click({ position: { x: 20, y: 20 } });
+  await expect(page.getByRole('complementary', { name: '弹幕配置面板' })).toBeVisible();
   const reference = (await frame.locator('#alignment-reference').boundingBox())!;
   const initial = (await region.boundingBox())!;
   const textAlign = await region.evaluate((node) => getComputedStyle(node).textAlign);
   for (const [label, ratio] of [['居中对齐', 0.5], ['右对齐', 1], ['左对齐', 0]] as const) {
     await region.click({ position: { x: 20, y: 20 } });
     const toolbar = page.locator('.tox-pop:visible');
-    await expect(toolbar.getByRole('button')).toHaveCount(5);
-    await toolbar.getByRole('button', { name: label, exact: true }).click();
+    await expect(toolbar.getByRole('button')).toHaveCount(2);
+    await toolbar.getByRole('button', { name: '弹幕设置', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: '弹幕设置', exact: true });
+    await dialog.getByRole('button', { name: label, exact: true }).click();
+    await expect(dialog.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await dialog.getByRole('button', { name: '应用设置', exact: true }).click();
     await expect.poll(async () => (await region.boundingBox())!.x).toBeCloseTo(reference.x + (reference.width - initial.width) * ratio, 0);
     const box = (await region.boundingBox())!;
     expect(box.y).toBeCloseTo(initial.y, 0); expect(box.width).toBeCloseTo(initial.width, 0); expect(box.height).toBeCloseTo(initial.height, 0);
     await expect(region).toHaveCSS('text-align', textAlign);
     const coordinates = await region.evaluate((node: HTMLElement) => ({ x: Number(node.getAttribute('data-danmaku-x')), left: parseFloat(node.style.left), y: Number(node.getAttribute('data-danmaku-y')), top: parseFloat(node.style.top) }));
     expect(coordinates.x).toBe(coordinates.left); expect(coordinates.y).toBe(coordinates.top);
-    await expect(toolbar.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
     const border = (await frame.locator('.object-selection-frame').boundingBox())!;
     expect(border.x).toBeCloseTo(box.x, 0);
   }

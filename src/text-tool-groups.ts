@@ -11,7 +11,7 @@ export function registerTextToolGroups(editor: Editor): void {
       const target = event.target;
       const toolbar = target.closest('.tox-pop');
       const group = target.closest('[data-toolbar-group^="textgroup"]');
-      if (!group && !toolbar?.querySelector('[data-mce-name="fontfamily"], [data-mce-name="textdrag"]')) return;
+      if (!group && !toolbar?.querySelector('[data-mce-name="textsettings"]')) return;
       const groupButton = target.closest<HTMLButtonElement>('button[data-mce-name^="textgroup"]');
       if (groupButton) {
         // 第二次点击会销毁当前面板；先将焦点移回入口，避免面板移除后落到 body。
@@ -42,10 +42,4 @@ export function registerTextToolGroups(editor: Editor): void {
       doc.removeEventListener('keydown', key, true); editor.getDoc().removeEventListener('keydown', key, true);
     });
   });
-  for (const [name, text, tooltip, items] of [
-    ['style', '样式', '文字样式', 'bold italic underline strikethrough subscript superscript removeformat'],
-    ['paragraph', '段落', '标题与段落', 'h1 h2 h3 h4 h5 h6 ltr rtl blockquote']
-  ] as const) {
-    editor.ui.registry.addGroupToolbarButton(`textgroup${name}`, { text, tooltip, items });
-  }
 }

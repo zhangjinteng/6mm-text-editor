@@ -68,9 +68,11 @@ test('本地源码、表格和表情对话框正常，无商业插件按钮', as
   await page.keyboard.press('Escape');
   const emojiArea = (await page.locator('.tox-edit-area iframe').boundingBox())!;
   await page.mouse.click(emojiArea.x + emojiArea.width - 20, emojiArea.y + 30);
-  await page.locator('[data-mce-name="emoticons"]').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.locator('[data-mce-name="canvassettings"]').click();
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '表情符号', exact: true }).click();
+  await expect(page.getByRole('dialog').filter({ has: page.getByRole('textbox', { name: '搜索', exact: true }) })).toBeVisible();
   await page.keyboard.press('Escape');
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   await page.locator('[data-mce-name="table"]').click();
   await expect(page.locator('.tox-menu').first()).toBeVisible();
   await page.keyboard.press('Escape');

@@ -4,7 +4,26 @@ declare global { interface Window { tinymce: { activeEditor: Editor } } }
 
 const source = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 async function action(page: Page, label: string) {
+  if (await page.evaluate(() => !!window.tinymce.activeEditor.selection.getNode().closest('div[data-danmaku-source]'))) {
+    await page.locator('.tox-pop:visible').getByRole('button', { name: '弹幕设置', exact: true }).click();
+    const d = page.getByRole('dialog', { name: '弹幕设置', exact: true });
+    await d.getByRole('button', { name: label, exact: true }).click();
+    await d.getByRole('button', { name: '应用设置', exact: true }).click(); return;
+  }
+  if (await page.evaluate(() => !!window.tinymce.activeEditor.selection.getNode().closest('img'))) {
+    await page.locator('.tox-pop:visible [data-mce-name="imagesettings"]').click();
+    const d = page.getByRole('dialog', { name: '图片设置', exact: true });
+    await d.getByRole('tab', { name: '排版', exact: true }).click();
+    await d.getByRole('button', { name: label, exact: true }).click();
+    await d.getByRole('button', { name: '应用设置', exact: true }).click(); return;
+  }
   const button = page.locator('.tox-pop:visible').getByRole('button', { name: '图层设置', exact: true });
+  if (await page.evaluate(() => !!window.tinymce.activeEditor.selection.getNode().closest('span[data-text-draggable]'))) {
+    const panel = page.getByRole('complementary', { name: '文字配置面板' });
+    await panel.getByRole('tab', { name: '对象', exact: true }).click();
+    await panel.getByRole('button', { name: label, exact: true }).click();
+    return;
+  }
   await expect(button).toHaveCount(1);
   await button.click();
   await page.getByRole('menuitem', { name: label, exact: true }).click();
@@ -27,9 +46,6 @@ test('四种图层操作改变图片、文字、弹幕的遮挡顺序，支持�
   }, source);
   const frame = page.frameLocator('.tox-edit-area iframe');
   const before = (await frame.locator('#image').boundingBox())!;
-  await page.locator('.tox-pop:visible').getByRole('button', { name: '图层设置', exact: true }).click();
-  await expect(page.locator('.tox-menu:visible').getByRole('menuitem')).toHaveText(['下一层', '上一层', '置于底层', '置于顶层']);
-  await page.keyboard.press('Escape');
   await action(page, '上一层'); expect(await order(page)).toEqual(['text', 'image', 'danmaku']);
   await action(page, '上一层'); expect(await order(page)).toEqual(['text', 'danmaku', 'image']);
   const hit = () => page.evaluate(() => {
@@ -53,7 +69,7 @@ test('四种图层操作改变图片、文字、弹幕的遮挡顺序，支持�
   await expect(page.frameLocator('iframe[title="文档预览"]').locator('#image')).toHaveCSS('z-index', '3');
 });
 
-test('文字选区可设为独立图层，保留格式；各工具栏切换位置后仍有唯一图层菜单', async ({ page }) => {
+test('文字选区可设为独立图层，切换停靠后文字配置与其他对象图层菜单可用', async ({ page }) => {
   await page.evaluate(source => {
     const e = window.tinymce.activeEditor;
     e.setContent(`<p id="plain">选中<strong>粗体</strong>文字</p><p><img src="${source}" alt="另一图层" width="80" height="60"></p><div data-danmaku-source="current" style="width:180px;height:100px;background:#ddd"></div>`);

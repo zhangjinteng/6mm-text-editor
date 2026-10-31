@@ -26,7 +26,7 @@ test('图片设置预览不修改原图，应用效果可撤销并保留到保�
   await dialog.getByRole('tab', { name: '外观', exact: true }).click();
   await dialog.getByRole('slider', { name: '不透明度', exact: true }).fill('60');
   await dialog.getByRole('slider', { name: '圆角', exact: true }).fill('20');
-  await expect(dialog.locator('img')).toHaveCSS('opacity', '0.6');
+  await expect(dialog.locator('.image-settings-preview img')).toHaveCSS('opacity', '0.6');
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
@@ -81,8 +81,8 @@ test('本地替换保留位置尺寸与效果、清除旧裁剪，坏地址不�
   await dialog.getByLabel('图片地址', { exact: true }).fill('javascript:alert(1)');
   await dialog.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('HTTP'); await expect(image).toHaveAttribute('src', oldSrc!);
-  await dialog.locator('input[type=file]').setInputFiles({ name: 'new.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="160"><rect width="80" height="160" fill="green"/></svg>') });
-  await expect(dialog.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  await dialog.locator('input[data-image-file]').setInputFiles({ name: 'new.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="160"><rect width="80" height="160" fill="green"/></svg>') });
+  await expect(dialog.locator('.image-settings-preview img')).toHaveAttribute('src', /^data:image\/svg\+xml/);
   await dialog.getByRole('tab', { name: '外观', exact: true }).click(); await dialog.getByRole('slider', { name: '不透明度', exact: true }).fill('70');
   await dialog.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(dialog).toHaveCount(0); expect(await image.boundingBox()).toEqual(original);
@@ -98,13 +98,13 @@ test('远程替换支持无 CORS 图片，关闭或 Esc 不写入，窄屏页签
   let dialog = await open(page);
   await dialog.getByLabel('图片地址', { exact: true }).fill('https://image-settings.test/new.svg');
   await dialog.getByRole('tab', { name: '外观', exact: true }).click();
-  await expect(dialog.locator('img')).toHaveAttribute('src', 'https://image-settings.test/new.svg');
+  await expect(dialog.locator('.image-settings-preview img')).toHaveAttribute('src', 'https://image-settings.test/new.svg');
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); await expect(image).toHaveAttribute('src', oldSource!);
   dialog = await open(page);
   await dialog.getByLabel('图片地址', { exact: true }).fill('https://image-settings.test/new.svg');
   await dialog.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(image).toHaveAttribute('src', 'https://image-settings.test/new.svg');
-  await page.getByRole('button', { name: '收起直播弹幕', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
   dialog = await open(page);
   // 在打开的面板上改变视口，独立验证面板的响应式布局。
   await page.setViewportSize({ width: 390, height: 844 });
@@ -113,4 +113,69 @@ test('远程替换支持无 CORS 图片，关闭或 Esc 不写入，窄屏页签
   await page.keyboard.press('ArrowRight'); await expect(dialog.getByRole('tab', { name: '外观', exact: true })).toHaveAttribute('aria-selected', 'true');
   await page.screenshot({ path: '/tmp/test44-image-settings-mobile.png' });
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
+});
+
+test('迁移后的图片编辑、裁剪、对齐和图层设置共享草稿并一次撤销', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => {
+    const e = window.tinymce.activeEditor, photo = e.getBody().querySelector('img')!;
+    e.dom.setStyle(photo, 'z-index', '1');
+    const other = photo.cloneNode() as HTMLImageElement; other.id = 'other'; other.style.left = '500px'; other.style.zIndex = '2'; photo.parentElement!.append(other);
+    e.undoManager.clear(); e.undoManager.add();
+  });
+  const image = page.frameLocator('.tox-edit-area iframe').locator('#photo');
+  const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
+  const originalBounds = (await image.boundingBox())!;
+  let d = await open(page);
+  await expect(page.locator('.tox-pop:visible [data-mce-name="image"],.tox-pop:visible [data-mce-name="imagecrop"],.tox-pop:visible [data-mce-name="layersettings"],.tox-pop:visible [data-mce-name^="align"]')).toHaveCount(0);
+  await d.getByRole('textbox', { name: '图片描述', exact: true }).fill('新的图片描述');
+  await d.getByRole('textbox', { name: '图片标题', exact: true }).fill('图片标题');
+  await d.getByRole('button', { name: '裁剪图片', exact: true }).click();
+  const c = page.getByRole('dialog', { name: '裁剪图片', exact: true });
+  await c.getByRole('button', { name: '1:1', exact: true }).click();
+  await c.getByRole('button', { name: '应用裁剪', exact: true }).click();
+  await expect(d.getByRole('spinbutton', { name: '图片宽度', exact: true })).toHaveValue('100');
+  await d.getByRole('tab', { name: '排版', exact: true }).click();
+  await d.getByRole('button', { name: '右对齐', exact: true }).click();
+  await d.getByRole('button', { name: '置于顶层', exact: true }).click();
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  await page.screenshot({ path: 'screenshots/image-settings-layout.png' });
+  await d.getByRole('button', { name: '取消', exact: true }).click();
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  d = await open(page);
+  await d.getByRole('textbox', { name: '图片描述', exact: true }).fill('应用的描述');
+  await d.getByRole('spinbutton', { name: '图片宽度', exact: true }).fill('300');
+  await expect(d.getByRole('spinbutton', { name: '图片高度', exact: true })).toHaveValue('150');
+  await d.getByRole('button', { name: '裁剪图片', exact: true }).click();
+  await c.getByRole('button', { name: '1:1', exact: true }).click();
+  await c.getByRole('button', { name: '应用裁剪', exact: true }).click();
+  await d.getByRole('tab', { name: '排版', exact: true }).click();
+  await d.getByRole('button', { name: '右对齐', exact: true }).click();
+  await d.getByRole('button', { name: '置于顶层', exact: true }).click();
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(image).toHaveAttribute('alt', '应用的描述');
+  await expect(image).toHaveCSS('width', '150px'); await expect(image).toHaveCSS('height', '150px');
+  await expect(image).toHaveCSS('z-index', '2');
+  expect((await image.boundingBox())!.x).toBeGreaterThan(originalBounds.x);
+  await expect(image).toHaveCSS('top', '100px');
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.undo());
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+});
+
+test('锁定图片禁用尺寸、裁剪、对齐与图层，尺寸输入校验可恢复', async ({ page }) => {
+  await setup(page); let d = await open(page);
+  await d.getByRole('spinbutton', { name: '图片宽度', exact: true }).fill('0');
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(d.getByRole('alert')).toContainText('1—20000');
+  await d.getByRole('spinbutton', { name: '图片宽度', exact: true }).fill('');
+  await d.getByRole('spinbutton', { name: '图片宽度', exact: true }).fill('300');
+  await expect(d.getByRole('spinbutton', { name: '图片高度', exact: true })).toHaveValue('150');
+  await d.getByRole('spinbutton', { name: '图片宽度', exact: true }).fill('200');
+  await d.getByRole('checkbox', { name: '锁定位置与尺寸', exact: true }).check();
+  await expect(d.getByRole('button', { name: '裁剪图片', exact: true })).toBeDisabled();
+  await expect(d.getByRole('spinbutton', { name: '图片宽度', exact: true })).toBeDisabled();
+  await d.getByRole('tab', { name: '排版', exact: true }).click();
+  for (const name of ['左对齐','居中对齐','右对齐','上一层','下一层','置于顶层','置于底层']) await expect(d.getByRole('button', { name, exact: true })).toBeDisabled();
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(page.frameLocator('.tox-edit-area iframe').locator('#photo')).toHaveAttribute('data-image-locked', 'true');
 });

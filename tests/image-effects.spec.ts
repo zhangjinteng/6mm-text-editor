@@ -1,0 +1,103 @@
+import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+test('轮廓投影发光与装饰遵循透明主体，预设全部能生成有效效果', async ({ page }) => {
+  await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  const result = await page.evaluate(async () => {
+    // @ts-expect-error Vite browser module.
+    const { createImageStroke } = await import('/src/image-stroke.ts');
+    // @ts-expect-error Vite browser module.
+    const { imageEffectPresets, effectPresetPatch } = await import('/src/image-effects.ts');
+    const source = document.createElement('canvas'); source.width = source.height = 100;
+    const c = source.getContext('2d')!; c.fillStyle = '#ffa500'; c.fillRect(25, 25, 50, 50); c.clearRect(40, 40, 20, 20);
+    const base = { stroke: false, strokeWidth: 4, strokeColor: '#fff', strokeStyle: 'solid', strokePosition: 'outside', mask: 'none', radius: 0 };
+    const render = async (options: object) => {
+      const r = await createImageStroke(source.toDataURL(), 100, 100, { ...base, ...options });
+      const img = new Image(); img.src = r.url; await img.decode();
+      const canvas = document.createElement('canvas'); canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!; ctx.drawImage(img, 0, 0);
+      const rgba = (x: number, y: number) => Array.from(ctx.getImageData(Math.round((x + r.pad) * img.naturalWidth / r.width), Math.round((y + r.pad) * img.naturalHeight / r.height), 1, 1).data);
+      const pixel = (x: number, y: number) => rgba(x, y)[3]!;
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let count = 0; for (let i = 3; i < data.length; i += 4) if (data[i]! > 0) count++;
+      return { innerRing: rgba(77, 50), outerRing: rgba(82, 50), count, center: pixel(30, 30), edge: pixel(77, 50), corner: pixel(0, 0), hole: pixel(42, 50) };
+    };
+    const shadow = await render({ shadow: true, shadowMode: 'contour', shadowX: 8, shadowY: 0, shadowBlur: 0, shadowOpacity: 100, shadowColor: '#000000' });
+    const glow = await render({ glow: true, glowRadius: 6, glowOpacity: 100, glowColor: '#ff0000' });
+    const presets: Record<string, number> = {};
+    for (const preset of imageEffectPresets) presets[preset.id] = (await render(effectPresetPatch(preset.id))).count;
+    const double = await render(effectPresetPatch('double-sticker'));
+    return { shadow, glow, presets, double };
+  });
+  expect(result.shadow.center).toBe(0); expect(result.shadow.edge).toBe(255); expect(result.shadow.corner).toBe(0); expect(result.shadow.hole).toBe(255);
+  expect(result.glow.center).toBe(0); expect(result.glow.edge).toBeGreaterThan(0); expect(result.glow.corner).toBe(0);
+  expect(result.double.innerRing).toEqual([255, 255, 255, 255]);
+  expect(result.double.outerRing).toEqual([255, 142, 206, 255]);
+  expect(result.presets.none).toBe(0);
+  for (const [name, count] of Object.entries(result.presets)) if (name !== 'none') expect(count, name).toBeGreaterThan(0);
+});
+
+test('特效预设实时应用、参数调整、撤销保存预览导出及弹窗取消', async ({ page }) => {
+  await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = c.height = 200; const ctx = c.getContext('2d')!;
+    const g = ctx.createRadialGradient(80, 70, 4, 100, 100, 80); g.addColorStop(0, '#fff18c'); g.addColorStop(1, '#ff8a39');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(100, 100, 70, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = '#273b32'; ctx.beginPath(); ctx.arc(78, 85, 8, 0, 2 * Math.PI); ctx.arc(122, 85, 8, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = '#273b32'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(100, 107, 18, .2, Math.PI - .2); ctx.stroke();
+    const e = window.tinymce.activeEditor;
+    e.setContent(`<p><img id="subject" src="${c.toDataURL()}" style="position:absolute;left:220px;top:100px;width:200px;height:200px"></p>`); e.undoManager.clear(); e.undoManager.add();
+  });
+  const frame = page.frameLocator('.tox-edit-area iframe'), img = frame.locator('#subject'), layer = frame.locator('[data-image-stroke-for]');
+  const panel = page.getByRole('complementary', { name: '图片配置面板' });
+  await img.click(); await panel.getByRole('tab', { name: '特效', exact: true }).click();
+  await expect(panel.getByRole('button', { name: '白边贴纸', exact: true })).toHaveAttribute('data-preview-ready', 'true');
+  expect((await panel.getByRole('button', { name: '白边贴纸', exact: true }).locator('.image-effect-thumb').boundingBox())!.width).toBeGreaterThan(40);
+  await panel.getByRole('group', { name: '特效分类' }).getByRole('button', { name: '发光', exact: true }).click();
+  await expect(panel.getByRole('button', { name: '金色光晕', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: '白边贴纸', exact: true })).toBeHidden();
+  await panel.getByRole('group', { name: '特效分类' }).getByRole('button', { name: '热门', exact: true }).click();
+  await panel.getByRole('button', { name: '粉色光晕', exact: true }).click();
+  await expect(layer).toHaveCount(1); await expect(img).toHaveAttribute('data-image-settings', /"glow":true/);
+  await page.screenshot({ path: 'screenshots/image-effects-presets.png' });
+  await panel.getByRole('slider', { name: '发光范围', exact: true }).fill('24');
+  await expect(img).toHaveAttribute('data-image-settings', /"glowRadius":24/);
+  await panel.getByRole('combobox', { name: '装饰样式', exact: true }).selectOption('hearts');
+  await expect(img).toHaveAttribute('data-image-settings', /"decoration":"hearts"/);
+  await page.screenshot({ path: 'screenshots/image-effects-sidebar.png' });
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.undo());
+  await expect(img).toHaveAttribute('data-image-settings', /"decoration":"none"/);
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.redo());
+  await expect(img).toHaveAttribute('data-image-settings', /"decoration":"hearts"/);
+  await img.click(); await page.locator('.tox-pop:visible [data-mce-name="imagesettings"]').click();
+  const d = page.getByRole('dialog', { name: '图片设置', exact: true });
+  await d.getByRole('tab', { name: '特效', exact: true }).click();
+  await d.getByRole('button', { name: '无特效', exact: true }).click();
+  await expect(img).toHaveAttribute('data-image-settings', /"glow":true/);
+  await d.getByRole('button', { name: '取消', exact: true }).click();
+  await page.evaluate(() => { const e = window.tinymce.activeEditor; e.dom.setStyles(e.getBody().querySelector('#subject')!, { width: '250px', height: '250px', rotate: '25deg', scale: '-1 1' }); e.dispatch('ResizeContent'); });
+  await expect(layer).toHaveCSS('rotate', '25deg'); await expect(layer).toHaveCSS('scale', '-1 1');
+  await expect.poll(() => layer.evaluate(el => parseFloat((el as HTMLElement).style.width) - 2 * Number(el.getAttribute('data-stroke-pad')))).toBe(250);
+  await page.getByRole('button', { name: '保存文档', exact: true }).click(); await page.reload(); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await expect(layer).toHaveCount(1); await expect(img).toHaveAttribute('data-image-settings', /"decoration":"hearts"/);
+  await page.getByRole('navigation', { name: '文档视图' }).getByRole('button', { name: '预览', exact: true }).click();
+  await expect(page.frameLocator('iframe[title="文档预览"]').locator('[data-image-stroke-for]')).toHaveCount(1);
+  await page.getByRole('button', { name: '导出', exact: true }).click(); const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'HTML 文档', exact: true }).click();
+  expect(await readFile(await (await download).path(), 'utf8')).toContain('data-image-stroke-for');
+  await page.getByRole('navigation', { name: '文档视图' }).getByRole('button', { name: '编辑', exact: true }).click();
+  await img.click(); await panel.getByRole('tab', { name: '特效', exact: true }).click();
+  await panel.getByRole('button', { name: '无特效', exact: true }).click(); await expect(layer).toHaveCount(0);
+  await panel.getByRole('tab', { name: '滤镜', exact: true }).click();
+  await panel.getByRole('button', { name: '黑白', exact: true }).click();
+  await panel.getByRole('tab', { name: '蒙版', exact: true }).click();
+  await panel.getByRole('button', { name: '圆形', exact: true }).click();
+  await panel.getByRole('tab', { name: '特效', exact: true }).click();
+  await panel.getByRole('button', { name: '双层贴纸', exact: true }).click(); await expect(layer).toHaveCount(1);
+  await panel.getByRole('button', { name: '无特效', exact: true }).click(); await expect(layer).toHaveCount(0);
+  await expect(img).toHaveCSS('filter', /grayscale/); await expect(img).toHaveCSS('clip-path', /circle/);
+  await page.setViewportSize({ width: 390, height: 844 }); await panel.scrollIntoViewIfNeeded();
+  const bounds = (await panel.boundingBox())!; expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390);
+  await expect(panel.getByRole('button', { name: '双层贴纸', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'screenshots/image-effects-mobile.png' });
+});

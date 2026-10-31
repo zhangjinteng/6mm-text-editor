@@ -4,22 +4,51 @@ import { selectionHasLockedText } from './text-box-state';
 const selector = 'img:not([data-mce-object]):not([data-mce-placeholder]):not([data-document-background]),div[data-danmaku-source],span[data-text-draggable],table,video,iframe';
 type LayerAction = 'backward' | 'forward' | 'bottom' | 'top';
 
+export function outerLayerObject(element: HTMLElement): HTMLElement {
+  let current = element;
+  for (let parent = current.parentElement?.closest<HTMLElement>(selector); parent; parent = current.parentElement?.closest<HTMLElement>(selector)) current = parent;
+  return current;
+}
+
+export function readObjectLayers(body: HTMLElement): HTMLElement[] {
+  const view = body.ownerDocument.defaultView!;
+  return Array.from(body.querySelectorAll<HTMLElement>(selector))
+    .filter(element => !element.closest('[data-mce-bogus]') && !element.parentElement?.closest(selector) && element.getClientRects().length > 0)
+    .sort((a, b) => {
+      const z = (element: HTMLElement) => parseInt(view.getComputedStyle(element).zIndex, 10) || 0;
+      return z(a) - z(b) || (a.compareDocumentPosition(b) & 4 ? -1 : 1);
+    });
+}
+
+function writeObjectLayers(editor: Editor, order: HTMLElement[]) {
+  order.forEach((element, index) => {
+    if (editor.getWin().getComputedStyle(element).position === 'static') editor.dom.setStyle(element, 'position', 'relative');
+    editor.dom.setStyle(element, 'z-index', String(index + 1));
+  });
+}
+
+/** The caller owns the undo transaction, so layer and text edits commit atomically. */
+export function setObjectLayerPosition(editor: Editor, box: HTMLElement, position: number) {
+  const order = readObjectLayers(editor.getBody()), target = outerLayerObject(box);
+  const index = order.indexOf(target);
+  if (index < 0 || !Number.isInteger(position)) return;
+  const next = Math.max(0, Math.min(order.length - 1, position - 1));
+  if (index === next) return;
+  order.splice(index, 1); order.splice(next, 0, target);
+  writeObjectLayers(editor, order);
+}
+
 /** 内容对象使用连续的正层级，编辑辅助框始终保留在内容上方。 */
 export function registerLayerSettings(editor: Editor): void {
-  function outerObject(element: HTMLElement) {
-    let current = element;
-    for (let parent = current.parentElement?.closest<HTMLElement>(selector); parent; parent = current.parentElement?.closest<HTMLElement>(selector)) current = parent;
-    return current;
-  }
   function targets(): HTMLElement[] {
     const body = editor.getBody();
     if (!body) return [];
     const closest = editor.selection.getNode().closest<HTMLElement>(selector);
-    if (closest && body.contains(closest)) return [outerObject(closest)];
+    if (closest && body.contains(closest)) return [outerLayerObject(closest)];
     const range = editor.selection.getRng();
     if (range.collapsed) return [];
     return [...new Set(Array.from(body.querySelectorAll<HTMLElement>(selector))
-      .filter(element => range.intersectsNode(element)).map(outerObject))];
+      .filter(element => range.intersectsNode(element)).map(outerLayerObject))];
   }
   function canApply() {
     return !editor.mode.isReadOnly() && !selectionHasLockedText(editor) && (targets().length > 0 || (!editor.selection.isCollapsed() && !!editor.selection.getContent({ format: 'text' }).trim()));
@@ -36,13 +65,7 @@ export function registerLayerSettings(editor: Editor): void {
         for (const element of selected) editor.dom.setStyle(element, 'display', 'inline-block');
       }
       if (!selected.length) return;
-      const view = editor.getWin();
-      const order = Array.from(editor.getBody().querySelectorAll<HTMLElement>(selector))
-        .filter(element => !element.parentElement?.closest(selector) && element.getClientRects().length > 0)
-        .sort((a, b) => {
-          const z = (element: HTMLElement) => parseInt(view.getComputedStyle(element).zIndex, 10) || 0;
-          return z(a) - z(b) || (a.compareDocumentPosition(b) & 4 ? -1 : 1);
-        });
+      const order = readObjectLayers(editor.getBody());
       const chosen = new Set(selected);
       let reordered = [...order];
       if (action === 'top' || action === 'bottom') {
@@ -58,10 +81,7 @@ export function registerLayerSettings(editor: Editor): void {
           if (chosen.has(reordered[index]) && !chosen.has(reordered[index + 1])) [reordered[index], reordered[index + 1]] = [reordered[index + 1], reordered[index]];
         }
       }
-      reordered.forEach((element, index) => {
-        if (view.getComputedStyle(element).position === 'static') editor.dom.setStyle(element, 'position', 'relative');
-        editor.dom.setStyle(element, 'z-index', String(index + 1));
-      });
+      writeObjectLayers(editor, reordered);
     });
     editor.nodeChanged(); editor.dispatch('ResizeContent'); editor.dispatch('ScrollContent'); editor.dispatch('change');
   }

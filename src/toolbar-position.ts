@@ -23,7 +23,11 @@ export function registerToolbarPosition(editor: Editor): void {
       .filter(spec => spec.type === 'contexttoolbar');
     const matchesNode = (node: Element) => toolbars.some(spec => spec.position !== 'line' && spec.predicate?.(node));
     editor.ui.registry.addContextToolbar('toolbarpositionnode', {
-      predicate: matchesNode, items: 'toolbarposition layersettings', position: 'node', scope: 'node'
+      predicate: matchesNode, items: 'toolbarposition', position: 'node', scope: 'node'
+    });
+    editor.ui.registry.addContextToolbar('objectlayersnode', {
+      predicate: node => matchesNode(node) && !node.closest('span[data-text-draggable],img,figure.image,div[data-danmaku-source]'),
+      items: 'layersettings', position: 'node', scope: 'node'
     });
     editor.ui.registry.addContextToolbar('toolbarpositionline', {
       predicate: node => !matchesNode(node) && toolbars.some(spec => spec.position === 'line' && spec.predicate?.(node)),

@@ -30,6 +30,8 @@ export function registerBlankSelection(editor: Editor): void {
     }
   });
   editor.on('init', () => {
+    // 初次加载以画布为当前对象，避免首段文字自动接管配置侧栏。
+    blankSelections.add(editor);
     const doc = editor.getDoc();
     const body = editor.getBody();
     const isContentHit = (event: PointerEvent) => {
@@ -48,7 +50,7 @@ export function registerBlankSelection(editor: Editor): void {
     };
     const down = (event: PointerEvent) => {
       if (event.button !== 0 || editor.mode.isReadOnly() || !body.contains(event.target as Node)) return;
-      if (isContentHit(event)) { blankSelections.delete(editor); return; }
+      if (isContentHit(event)) { blankSelections.delete(editor); editor.dispatch('CanvasSelectionChanged', { selected: false }); return; }
       blankSelections.add(editor);
       insertionPoints.set(editor, { x: event.clientX + editor.getWin().scrollX, y: event.clientY + editor.getWin().scrollY });
       // 保留在原图片/正文位置的折叠插入点，不让空白点击将它吸附到远处文字。
@@ -58,18 +60,22 @@ export function registerBlankSelection(editor: Editor): void {
       editor.dispatch('contexttoolbar-hide'); editor.nodeChanged();
       editor.focus();
       editor.dispatch('contexttoolbar-show', { toolbarKey: 'canvasbackground' });
+      editor.dispatch('CanvasSelectionChanged', { selected: true });
     };
     const reset = () => { blankSelections.delete(editor); };
+    const clear = () => { reset(); editor.dispatch('CanvasSelectionChanged', { selected: false }); };
     const key = (event: KeyboardEvent) => {
       if (['Shift', 'Control', 'Meta', 'Alt', 'Escape'].includes(event.key)) return;
-      if (isBlankSelection(editor)) { reset(); editor.nodeChanged(); }
+      if (isBlankSelection(editor)) { clear(); editor.nodeChanged(); }
     };
     doc.addEventListener('pointerdown', down, true);
     doc.addEventListener('keydown', key, true);
-    editor.on('BeforeSetContent Undo Redo CanvasTextInserted TextBoxSelected', reset);
+    editor.on('BeforeSetContent Undo Redo', reset);
+    editor.on('CanvasTextInserted TextBoxSelected', clear);
     editor.on('remove', () => {
       reset(); doc.removeEventListener('pointerdown', down, true); doc.removeEventListener('keydown', key, true);
-      editor.off('BeforeSetContent Undo Redo CanvasTextInserted TextBoxSelected', reset);
+      editor.off('BeforeSetContent Undo Redo', reset);
+      editor.off('CanvasTextInserted TextBoxSelected', clear);
     });
   });
 }

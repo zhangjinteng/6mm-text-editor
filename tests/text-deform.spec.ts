@@ -3,7 +3,7 @@ import type { Editor } from 'tinymce';
 declare global { interface Window { tinymce: { activeEditor: Editor } } }
 const box = (p: Page) => p.frameLocator('.tox-edit-area iframe').locator('#deform');
 const dialog = (p: Page) => p.getByRole('dialog', { name: '文字设置', exact: true });
-const preview = (p: Page) => p.frameLocator('iframe[title="文字效果预览"]').locator('body > [data-text-draggable]');
+const preview = (p: Page) => p.frameLocator('iframe[title="文字效果预览"]').locator('body [data-text-draggable]');
 async function open(p: Page) { await box(p).click(); await p.locator('.tox-pop:visible [data-mce-name="textsettings"]').click(); await dialog(p).getByRole('tab', { name: '变形', exact: true }).click(); }
 async function choose(p: Page, name: string) { await dialog(p).getByRole('button', { name, exact: true }).click(); }
 async function apply(p: Page) { await dialog(p).getByRole('button', { name: '应用设置', exact: true }).click(); await expect(dialog(p)).toHaveCount(0); }

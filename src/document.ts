@@ -1,5 +1,6 @@
 import { advancedTextStyles } from './text-advanced';
 import { animationStyles } from './animations';
+import { defaultFontFamily, installFonts, embedDocumentFonts } from './fonts';
 
 export interface Revision {
   revisionId: string;
@@ -66,7 +67,7 @@ export const contentStyles = `
 ${animationStyles}
 ${advancedTextStyles}
 span[data-text-draggable] { display: inline-block; min-height: 1em; white-space: pre-wrap; overflow-wrap: anywhere; }
-body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; color: #25342f; font-size: 15px; line-height: 1.9; letter-spacing: 0; min-height: 100vh; isolation: isolate; box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
+body { font-family: ${defaultFontFamily}, sans-serif; color: #25342f; font-size: 15px; line-height: 1.9; letter-spacing: 0; min-height: 100vh; isolation: isolate; box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
 h1 { font-size: 32px; line-height: 1.4; margin: 16px 0; font-weight: 650; }
 h2 { font-size: 21px; margin-top: 32px; line-height: 1.5; }
 h3 { font-size: 18px; } a { color: #147d64; }
@@ -92,11 +93,18 @@ export function documentHtml(content: string, title: string, preview = false): s
   const style = doc.createElement('style');
   style.textContent = contentStyles;
   doc.head.append(style);
+  installFonts(doc);
   if (preview) {
     const csp = doc.createElement('meta');
     csp.httpEquiv = 'Content-Security-Policy';
-    csp.content = "default-src 'none'; img-src https: data: blob:; media-src https: data: blob:; style-src 'unsafe-inline'; font-src https: data:; frame-src https:;";
+    csp.content = `default-src 'none'; img-src https: data: blob:; media-src https: data: blob:; style-src 'unsafe-inline' ${window.location.origin}; font-src ${window.location.origin} data:; frame-src https:;`;
     doc.head.prepend(csp);
   }
+  return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+}
+
+export async function portableDocumentHtml(content: string, title: string): Promise<string> {
+  const doc = new DOMParser().parseFromString(documentHtml(content, title), 'text/html');
+  await embedDocumentFonts(doc);
   return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
 }

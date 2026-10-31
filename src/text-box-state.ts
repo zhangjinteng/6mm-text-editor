@@ -4,7 +4,9 @@ import { isBlankSelection } from './blank-selection';
 const selected = new WeakMap<Editor, HTMLElement>();
 export const isTextLocked = (element?: Element | null) => element?.getAttribute('data-text-locked') === 'true';
 export function setSelectedTextBox(editor: Editor, element?: HTMLElement) {
+  const previous = selected.get(editor);
   if (element) selected.set(editor, element); else selected.delete(editor);
+  if (previous !== element && !editor.removed) editor.dispatch('TextBoxSelectionChanged', { box: element });
 }
 export function currentTextBox(editor: Editor): HTMLElement | undefined {
   const cached = selected.get(editor);

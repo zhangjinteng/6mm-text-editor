@@ -1,0 +1,21 @@
+.canvas-config-panel{width:320px;min-height:0;position:sticky;top:16px;align-self:flex-start;height:calc(100vh - 210px);overflow:hidden;color:var(--ink)}
+.canvas-config-heading{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+.canvas-config-heading h2{margin:0;font-size:15px;font-weight:600}
+.canvas-config-heading p{margin:6px 0 0;font-size:11px;color:var(--muted)}
+.canvas-config-body{flex:1;min-height:0;overflow:auto;padding:16px 18px 24px}
+.canvas-config-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:24px;border-radius:8px;background:#eff5f2}
+.canvas-config-tabs button{border:0;border-radius:5px;background:transparent;color:var(--muted);padding:9px;font-size:12px;cursor:pointer}
+.canvas-config-tabs button[aria-selected=true]{color:var(--green);background:white;box-shadow:0 1px 5px #253b2910;font-weight:600}
+.canvas-config-color,.canvas-config-opacity{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:20px}
+.canvas-config-color>span,.canvas-config-opacity>span{display:flex;align-items:center;gap:6px}
+.canvas-config-panel input[type=text],.canvas-config-panel input[type=number]{border:1px solid #cbded4;border-radius:5px;background:white;color:inherit;padding:8px;font-size:12px;min-width:0}
+.canvas-config-panel input[type=text]{width:105px}.canvas-config-panel input[type=number]{width:65px;text-align:right}
+.canvas-config-panel input[type=color]{width:30px;height:32px;padding:3px;border:1px solid #cbded4;border-radius:5px;background:white;cursor:pointer}
+.canvas-config-opacity{margin-bottom:8px}.canvas-config-slider{width:100%;margin:4px 0;accent-color:var(--green)}
+.canvas-config-scale{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:4px}
+.canvas-config-hint{font-size:11px;line-height:1.8;color:var(--muted);margin:24px 0 0}
+.canvas-config-insert{display:grid;gap:10px}.canvas-config-insert button{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:7px;background:#fafcfb;color:inherit;font-size:12px;cursor:pointer;text-align:left}.canvas-config-insert button:hover{border-color:var(--green);color:var(--green);background:#eff7f3}
+.canvas-config-panel footer{padding:10px 14px;border-top:1px solid var(--line);background:#fafcfb;flex-shrink:0}.canvas-config-panel footer button{padding:6px 8px;font-size:12px}
+.canvas-config-error{color:#b54839;font-size:12px;line-height:1.6}
+@media(max-width:900px){.canvas-config-panel{width:290px}}
+@media(max-width:620px){.canvas-config-panel.side-panel{position:relative;top:auto;right:auto;bottom:auto;width:100%;height:430px;max-height:60vh;margin-top:12px;box-shadow:none;z-index:auto}.canvas-config-heading{padding:12px 16px}}

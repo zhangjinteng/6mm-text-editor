@@ -30,7 +30,7 @@ test('旋转与蒙版可预览、取消、应用、撤销、保存和导出，�
     await d.getByRole('button', { name: mask, exact: true }).click();
     await expect(d.getByRole('button', { name: mask, exact: true })).toHaveAttribute('aria-pressed', 'true');
   }
-  await expect(d.locator('img')).toHaveCSS('clip-path', 'none'); await expect(d.locator('img')).toHaveCSS('mask-image', 'none');
+  await expect(d.locator('.image-settings-preview img')).toHaveCSS('clip-path', 'none'); await expect(d.locator('.image-settings-preview img')).toHaveCSS('mask-image', 'none');
   await d.getByRole('button', { name: '菱形', exact: true }).click();
   await page.screenshot({ path: '/tmp/test44-rotation-mask.png' });
   await expect(image).toHaveCSS('rotate', 'none');
@@ -87,14 +87,15 @@ test('旋转后裁剪和替换仍用原始布局尺寸，渐隐可保存并通�
   await d.getByRole('button', { name: '应用设置', exact: true }).click();
   const frame = page.frameLocator('.tox-edit-area iframe'), image = frame.locator('#rotated');
   await expect(image).toHaveCSS('mask-image', /linear-gradient/);
-  await image.click(); await page.locator('.tox-pop:visible [data-mce-name="imagecrop"]').click();
+  await image.click(); await page.locator('.tox-pop:visible [data-mce-name="imagesettings"]').click(); await page.getByRole('dialog',{name:'图片设置',exact:true}).getByRole('button',{name:'裁剪图片',exact:true}).click();
   const crop = page.getByRole('dialog', { name: '裁剪图片', exact: true });
   await crop.getByRole('button', { name: '重置', exact: true }).click();
   await crop.getByRole('button', { name: '应用裁剪', exact: true }).click();
+  await page.getByRole('dialog', { name: '图片设置', exact: true }).getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(image).toHaveCSS('width', '200px'); await expect(image).toHaveCSS('height', '100px');
   d = await open(page);
-  await d.locator('input[type=file]').setInputFiles({ name: 'replacement.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="120"><rect width="60" height="120" fill="blue"/></svg>') });
-  await expect(d.locator('img')).toHaveAttribute('src', /^data:image\/svg/);
+  await d.locator('input[data-image-file]').setInputFiles({ name: 'replacement.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="120"><rect width="60" height="120" fill="blue"/></svg>') });
+  await expect(d.locator('.image-settings-preview img')).toHaveAttribute('src', /^data:image\/svg/);
   await d.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(image).toHaveCSS('width', '200px'); await expect(image).toHaveCSS('height', '100px'); await expect(image).toHaveCSS('rotate', '90deg');
   await page.getByRole('button', { name: '保存文档', exact: true }).click(); await page.reload(); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);

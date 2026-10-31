@@ -24,8 +24,9 @@ test('原生表情窗口可切换 bilibili礼物、搜索插入并保存预览',
   await page.evaluate(() => { const e=window.tinymce.activeEditor; e.setContent('<p>礼物：</p>'); e.focus(); e.selection.select(e.getBody().querySelector('p')!,true); e.selection.collapse(false); });
   const emojiArea = (await page.locator('.tox-edit-area iframe').boundingBox())!;
   await page.mouse.click(emojiArea.x + emojiArea.width - 20, emojiArea.y + 30);
-  await page.locator('[data-mce-name="emoticons"]').click();
-  const dialog=page.getByRole('dialog');
+  await page.locator('[data-mce-name="canvassettings"]').click();
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '表情符号', exact: true }).click();
+  const dialog=page.getByRole('dialog').filter({ has: page.getByRole('textbox', { name: '搜索', exact: true }) });
   await dialog.getByRole('tab',{name:'bilibili礼物',exact:true}).click();
   const gift=catalog.gifts[0];
   await dialog.getByRole('textbox',{name:'搜索',exact:true}).fill(String(gift.id));
@@ -34,6 +35,7 @@ test('原生表情窗口可切换 bilibili礼物、搜索插入并保存预览',
   await expect(item).toBeVisible();
   await item.click();
   await expect(dialog).toHaveCount(0);
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   const image=page.frameLocator('.tox-edit-area iframe').locator(`img[data-bilibili-gift-id="${gift.id}"]`);
   await expect(image).toHaveAttribute('src',gift.image);
   await expect(image).toHaveAttribute('alt',gift.name);

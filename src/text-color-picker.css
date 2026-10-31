@@ -1,0 +1,26 @@
+:is(.text-settings-color,.image-settings-color,[data-color-control]) input[type=color][hidden]{display:none!important}
+:is(.text-settings-color,.image-settings-color,[data-color-control]) .text-color-trigger{position:relative;flex-shrink:0;width:30px;height:30px;border:1px solid #d5dfda;border-radius:6px;padding:3px;background:conic-gradient(#dfe4e1 25%,#fff 0 50%,#dfe4e1 0 75%,#fff 0) 0 0/8px 8px;cursor:pointer;overflow:hidden}
+.text-color-trigger:after{content:"";position:absolute;inset:3px;border-radius:3px;background:var(--picked-color)}
+:is(.text-settings-color,.image-settings-color,[data-color-control]) .text-color-trigger[aria-expanded=true]{border-color:#147d64;box-shadow:0 0 0 2px #147d6420}
+.text-color-trigger:disabled{opacity:.4;cursor:not-allowed}
+.text-color-popover{box-sizing:border-box;position:fixed;inset:auto;margin:0;width:266px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto;padding:16px;border:1px solid #e8ebe9;border-radius:15px;background:#fff;color:#252c28;box-shadow:0 12px 42px #17281e26;z-index:2147483647;font:12px/1.5 "PingFang SC","Microsoft YaHei",sans-serif}
+.text-color-popover *{box-sizing:border-box}.text-color-popover::backdrop{background:transparent}
+.text-color-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}.text-color-heading strong{font-size:13px;font-weight:600}
+.text-color-popover button{border:0;cursor:pointer;color:inherit;background:transparent;padding:0}.text-color-heading button{width:22px;height:22px;font:20px/1 sans-serif;color:#829088;border-radius:4px}.text-color-heading button:hover{background:#f1f4f2}
+.text-color-sv{position:relative;width:100%;height:140px;border-radius:8px;overflow:hidden;touch-action:none;cursor:crosshair;background-image:linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,transparent)}
+.text-color-sv i{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 1px #0008;pointer-events:none}
+.text-color-popover input[type=range]{appearance:none;-webkit-appearance:none;display:block;width:100%;height:12px;margin:14px 0 0;padding:0;border:0;border-radius:8px;cursor:pointer;touch-action:none}
+.text-color-popover .text-color-hue{background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+.text-color-popover .text-color-alpha{margin-top:10px;background:linear-gradient(to right,transparent,var(--alpha-color)),conic-gradient(#cdd1cf 25%,#fff 0 50%,#cdd1cf 0 75%,#fff 0) 0 0/8px 8px}
+.text-color-popover input[type=range]::-webkit-slider-thumb{appearance:none;width:12px;height:12px;border:1px solid #4f5a53;background:#fff;border-radius:50%;box-shadow:0 0 0 1px white}
+.text-color-popover input[type=range]::-moz-range-thumb{width:10px;height:10px;border:1px solid #4f5a53;background:#fff;border-radius:50%}
+.text-color-values{display:grid;grid-template-columns:30px minmax(0,1fr) 54px;gap:6px;margin-top:14px;align-items:center}
+.text-color-values button{height:32px;display:flex;align-items:center;justify-content:center;background:#f3f5f4;border-radius:6px}.text-color-values button:disabled{opacity:.35;cursor:not-allowed}
+.text-color-popover .text-color-values input[type=text]{width:100%;height:32px;min-width:0;margin:0;padding:6px 8px;border:1px solid #e0e5e2;border-radius:6px;color:#28372e;background:#fff;font:12px/1.4 "PingFang SC",sans-serif;box-shadow:none;text-align:left}
+.text-color-popover .text-color-values [data-picker-opacity]{padding:6px 4px;text-align:center}
+.text-color-palette-title{display:flex;align-items:center;gap:7px;margin:16px 0 9px;font-weight:600}.text-color-palette-title span{color:#8a968e;font-weight:400}
+.text-color-palette{display:grid;grid-template-columns:repeat(8,24px);gap:6px}.text-color-palette button{width:24px;height:24px;border:1px solid #dce3de;border-radius:6px}.text-color-palette [aria-pressed=true]{outline:2px solid #147d64;outline-offset:2px}
+.text-color-error{font-size:11px;color:#b34b3c;margin:8px 0 0}.text-color-popover [hidden]{display:none!important}
+.text-color-popover :is(button,input,[tabindex]):focus-visible{outline:2px solid #147d64;outline-offset:2px}
+
+.tox .canvas-dialog-color{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.tox .canvas-dialog-color>label{flex-basis:100%;margin:0}.tox .canvas-dialog-color>input[type=text]{flex:1;min-width:0;width:0}

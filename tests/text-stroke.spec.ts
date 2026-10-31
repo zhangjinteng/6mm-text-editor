@@ -6,15 +6,13 @@ const box = (page: Page) => frame(page).locator('#stroke');
 async function tool(page: Page, name: string) {
   if (['textappearance', 'textcurve'].includes(name)) {
     await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
-    if (name === 'textcurve') await page.getByRole('dialog', { name: '文字设置', exact: true }).getByRole('tab', { name: '变形', exact: true }).click();
+    await page.getByRole('dialog', { name: '文字设置', exact: true }).getByRole('tab', { name: name === 'textcurve' ? '变形' : '外观', exact: true }).click();
     return;
   }
-  if (name === 'textappearance' || name === 'textcurve') {
-    await page.evaluate(tab => window.tinymce.activeEditor.execCommand('TextSettings', false, tab), name === 'textcurve' ? 'curve' : 'appearance'); return;
-  }
-  const panel = page.locator('[data-toolbar-group="textgroupobject"]');
-  if (!await panel.isVisible()) await page.locator('.tox-pop:visible [data-mce-name="textgroupobject"]').click();
-  await panel.locator(`[data-mce-name="${name}"]`).click();
+  await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  const d = page.getByRole('dialog', { name: '文字设置', exact: true });
+  await d.getByRole('tab', { name: '对象', exact: true }).click();
+  await d.getByRole('button', { name: '创建文字副本', exact: true }).click();
 }
 async function appearance(page: Page) {
   await tool(page, 'textappearance');

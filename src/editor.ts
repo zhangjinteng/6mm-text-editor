@@ -1,11 +1,11 @@
 import type { Editor, RawEditorOptions } from 'tinymce';
 import { contentStyles } from './document';
+import { fontFamilyFormats, fontStylesheetUrl } from './fonts';
 import { registerBlankSelection } from './blank-selection';
 import { registerCanvasBackground } from './canvas-background';
 import { registerToolbarPosition } from './toolbar-position';
 import { registerLayerSettings } from './object-layers';
 import { bilibiliGiftEmoticons } from './bilibili-gifts';
-import { registerTextAnimations } from './animations';
 import { registerAdvancedText } from './text-advanced';
 import { registerTextSettings } from './text-settings';
 import { registerTextObjectTools } from './text-object-tools';
@@ -44,6 +44,8 @@ export function editorOptions(settings: Settings, callbacks: {
     menu: { format: { title: 'Format', items: 'bold italic underline strikethrough superscript subscript codeformat | styles blocks fontfamily fontsize align lineheight | forecolor backcolor | language | removeformat | removeimagebackground' } },
     toolbar: window.matchMedia('(max-width: 620px)').matches ? toolbars.join(' | ') : toolbars,
     toolbar_mode: 'sliding',
+    font_family_formats: fontFamilyFormats,
+    content_css: ['/vendor/tinymce/skins/content/default/content.min.css', fontStylesheetUrl],
     height: Math.max(600, window.innerHeight - 210), min_height: 500,
     max_height: settings.autoresize ? 1600 : undefined,
     resize: true, promotion: false, branding: true,
@@ -56,9 +58,9 @@ export function editorOptions(settings: Settings, callbacks: {
     emoticons_append: bilibiliGiftEmoticons,
     emoticons_database_url: '/vendor/tinymce/plugins/emoticons/js/emojis.min.js',
     contextmenu: 'link image table',
-    quickbars_selection_toolbar: 'fontfamily fontsizeinput | textgroupstyle forecolor backcolor textgroupparagraph textgrouplayout | textanimation textdrag | textsettings textgroupobject quicklink',
+    quickbars_selection_toolbar: 'textsettings | quicklink',
     quickbars_insert_toolbar: false,
-    quickbars_image_toolbar: 'image | alignleft aligncenter alignright | imagefill imagecrop imagebackground imagesettings',
+    quickbars_image_toolbar: 'imagefill imagebackground imagesettings',
     image_advtab: true, image_caption: true, image_title: true, image_uploadtab: true,
     automatic_uploads: true, file_picker_types: 'image media', images_file_types: 'jpeg,jpg,png,gif,webp,bmp',
     images_upload_handler: async (blobInfo) => {
@@ -88,7 +90,6 @@ export function editorOptions(settings: Settings, callbacks: {
       registerTextSettings(editor);
       registerToolbarPosition(editor);
       registerLayerSettings(editor);
-      registerTextAnimations(editor);
       registerTextDragging(editor);
       registerTextTypography(editor);
       registerTextClearFormat(editor);

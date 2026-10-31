@@ -1,9 +1,13 @@
 import type { Editor } from 'tinymce';
+import { maskAsset } from './image-masks';
+import { parseShadowColor } from './text-shadow';
+import { hasImageOverlay, paintImageEffects, imageEffectDefaults, imageEffectRanges, decorations, type ImageEffects } from './image-effects';
 
 export type StrokeOptions = {
   stroke: boolean; strokeWidth: number; strokeColor: string; strokeStyle: 'solid' | 'dashed' | 'dotted';
-  strokePosition: 'inside' | 'center' | 'outside'; mask: string; radius: number;
-};
+  strokePosition: 'inside' | 'center' | 'outside'; mask: string; maskSource?: string; radius: number;
+  shadow?: boolean; shadowX?: number; shadowY?: number; shadowBlur?: number; shadowOpacity?: number; shadowColor?: string;
+} & Partial<ImageEffects>;
 export const strokePositions = { inside: '内描边', center: '居中描边', outside: '外描边' } as const;
 export const strokePresets = { solid: '基础实线', dashed: '装饰 · 虚线', dotted: '装饰 · 点线' } as const;
 const layers = '[data-image-stroke-for]';
@@ -86,9 +90,21 @@ function boundary(binary: Uint8Array, w: number, h: number) {
   return path;
 }
 export async function createImageStroke(source: string, width: number, height: number, settings: StrokeOptions, crop = { x: 0, y: 0, width: 1, height: 1 }) {
+  settings = { ...settings };
+  for (const key of Object.keys(imageEffectRanges) as (keyof typeof imageEffectRanges)[]) {
+    const value = settings[key], [min, max] = imageEffectRanges[key];
+    settings[key] = typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(key === 'decorationCount' ? min : 0, value)) : imageEffectDefaults[key];
+  }
+  if (!settings.decoration || !Object.hasOwn(decorations, settings.decoration)) settings.decoration = 'none';
+  for (const key of ['glowColor', 'decorationColor', 'strokeOuterColor'] as const) if (!parseShadowColor(settings[key] ?? '', document)) settings[key] = imageEffectDefaults[key];
   const original = await load(source);
   const scale = Math.min(2, 2048 / Math.max(width, height)), w = Math.max(1, Math.round(width * scale)), h = Math.max(1, Math.round(height * scale));
-  const thickness = settings.strokeWidth * scale, pad = Math.ceil(thickness + 3), W = w + 2 * pad, H = h + 2 * pad;
+  const thickness = settings.strokeWidth * scale;
+  const extent = Math.max(settings.stroke ? settings.strokeWidth + (settings.strokeDouble ? settings.strokeOuterWidth ?? 4 : 0) : 0,
+    settings.glow ? (settings.glowRadius ?? 16) * 3 : 0,
+    settings.shadow && settings.shadowMode === 'contour' ? Math.max(Math.abs(settings.shadowX ?? 0), Math.abs(settings.shadowY ?? 8)) + (settings.shadowBlur ?? 16) * 2 : 0,
+    settings.decoration && settings.decoration !== 'none' ? (settings.decorationSize ?? 18) * 1.3 + (settings.decorationSpread ?? 12) : 0);
+  const pad = Math.ceil(extent * scale + 3), W = w + 2 * pad, H = h + 2 * pad;
   const alpha = canvas(W, H), ctx = alpha.getContext('2d', { willReadFrequently: true })!;
   ctx.translate(pad, pad);
   const geometry = shape(settings.mask, w, h, settings.radius * scale);
@@ -97,9 +113,14 @@ export async function createImageStroke(source: string, width: number, height: n
   if (settings.radius) ctx.clip(shape('none', w, h, settings.radius * scale));
   ctx.drawImage(original, crop.x * original.naturalWidth, crop.y * original.naturalHeight, crop.width * original.naturalWidth, crop.height * original.naturalHeight, 0, 0, w, h);
   ctx.restore();
+  const asset = maskAsset(settings.mask, settings.maskSource);
+  if (asset) {
+    const mask = await load(asset);
+    ctx.save(); ctx.globalCompositeOperation = 'destination-in'; ctx.drawImage(mask, 0, 0, w, h); ctx.restore();
+  }
   let pixels: ImageData;
-  try { pixels = ctx.getImageData(0, 0, W, H); } catch { throw new Error('此图片未允许跨域像素读取，无法生成透明轮廓描边。请先下载后上传本地图片。'); }
-  let opaque = true;
+  try { pixels = ctx.getImageData(0, 0, W, H); } catch { throw new Error('此图片未允许跨域像素读取，无法生成轮廓特效。请先下载后上传本地图片。'); }
+  let opaque = !asset;
   // Detect intrinsic transparency separately from the geometric mask.
   const probe = canvas(w, h), pc = probe.getContext('2d', { willReadFrequently: true })!;
   pc.drawImage(original, crop.x * original.naturalWidth, crop.y * original.naturalHeight, crop.width * original.naturalWidth, crop.height * original.naturalHeight, 0, 0, w, h);
@@ -117,7 +138,7 @@ export async function createImageStroke(source: string, width: number, height: n
   const vector = opaque && (!settings.radius || ['none', 'circle', 'ellipse'].includes(settings.mask));
   const binary = new Uint8Array(W * H);
   for (let i = 0; i < binary.length; i++) binary[i] = pixels.data[i * 4 + 3]! >= 128 ? 1 : 0;
-  if (vector || settings.strokeStyle !== 'solid') {
+  if (settings.stroke && (vector || settings.strokeStyle !== 'solid')) {
     out.strokeStyle = settings.strokeColor; out.lineJoin = 'round'; out.lineCap = settings.strokeStyle === 'dotted' ? 'round' : 'butt';
     out.lineWidth = thickness * (settings.strokePosition === 'center' ? 1 : 2);
     if (settings.strokeStyle !== 'solid') out.setLineDash(settings.strokeStyle === 'dashed' ? [thickness * 3, thickness * 2] : [.01, thickness * 2]);
@@ -127,20 +148,37 @@ export async function createImageStroke(source: string, width: number, height: n
       out.globalCompositeOperation = settings.strokePosition === 'inside' ? 'destination-in' : 'destination-out';
       out.drawImage(alpha, 0, 0); out.globalCompositeOperation = 'source-over';
     }
-  } else {
+  } else if (settings.stroke) {
     const toInside = distances(binary, W, H, 1), toOutside = distances(binary, W, H, 0), result = out.createImageData(W, H);
-    const rgb = [1, 3, 5].map(i => parseInt(settings.strokeColor.slice(i, i + 2), 16));
+    const color = parseShadowColor(settings.strokeColor, output.ownerDocument) ?? { color: '#ffffff', opacity: 100 };
+    const rgb = [1, 3, 5].map(i => parseInt(color.color.slice(i, i + 2), 16));
     const radius = thickness * (settings.strokePosition === 'center' ? .5 : 1);
     for (let i = 0; i < binary.length; i++) {
       const inside = binary[i] === 1;
       if ((settings.strokePosition === 'inside' && !inside) || (settings.strokePosition === 'outside' && inside)) continue;
       const distance = Math.sqrt((inside ? toOutside : toInside)[i]!) - .5;
       const coverage = Math.min(1, Math.max(0, radius + .5 - distance));
-      result.data.set([rgb[0]!, rgb[1]!, rgb[2]!, Math.round(255 * coverage)], i * 4);
+      result.data.set([rgb[0]!, rgb[1]!, rgb[2]!, Math.round(255 * coverage * (color.opacity ?? 100) / 100)], i * 4);
     }
     out.putImageData(result, 0, 0);
   }
-  return { url: output.toDataURL(), pad: pad / scale, width: W / scale, height: H / scale, method: vector ? 'path' : 'pixels' };
+  const combined = canvas(W, H), combinedContext = combined.getContext('2d')!;
+  paintImageEffects(alpha, combinedContext, settings, scale, pad, w, h);
+  if (settings.stroke && settings.strokeDouble) {
+    const distancesToSubject = distances(binary, W, H, 1), ring = canvas(W, H), ringContext = ring.getContext('2d')!;
+    const pixels = ringContext.createImageData(W, H);
+    const innerWidth = settings.strokePosition === 'inside' ? 0 : settings.strokeWidth * (settings.strokePosition === 'center' ? .5 : 1);
+    const radius = (innerWidth + (settings.strokeOuterWidth ?? 4)) * scale;
+    const color = parseShadowColor(settings.strokeOuterColor ?? '#ff8ece', ring.ownerDocument)!;
+    const rgb = [1, 3, 5].map(i => parseInt(color.color.slice(i, i + 2), 16));
+    for (let i = 0; i < binary.length; i++) if (!binary[i]) {
+      const coverage = Math.min(1, Math.max(0, radius + 1 - Math.sqrt(distancesToSubject[i]!)));
+      pixels.data.set([rgb[0]!, rgb[1]!, rgb[2]!, Math.round(255 * coverage * (color.opacity ?? 100) / 100)], i * 4);
+    }
+    ringContext.putImageData(pixels, 0, 0); combinedContext.drawImage(ring, 0, 0);
+  }
+  combinedContext.drawImage(output, 0, 0);
+  return { url: combined.toDataURL(), pad: pad / scale, width: W / scale, height: H / scale, method: vector ? 'path' : 'pixels' };
 }
 
 export function registerImageStrokes(editor: Editor) {
@@ -190,7 +228,7 @@ export function registerImageStrokes(editor: Editor) {
         let settings: StrokeOptions; try { settings = JSON.parse(image.getAttribute('data-image-settings')!); } catch { continue; }
         const id = image.getAttribute('data-image-stroke-id');
         const layer = Array.from(editor.getBody().querySelectorAll<HTMLElement>(layers)).find(el => el.getAttribute('data-image-stroke-for') === id);
-        if (!settings.stroke) { layer?.remove(); signatures.delete(image); pending.set(image, ++revision); continue; }
+        if (!hasImageOverlay(settings)) { layer?.remove(); signatures.delete(image); pending.set(image, ++revision); continue; }
         if (image.style.outline !== 'none') editor.dom.setStyles(image, { outline: 'none', outlineOffset: '0px' });
         if (layer) position(image, layer);
         if (!observed.has(image)) { resize?.observe(image); observed.add(image); }

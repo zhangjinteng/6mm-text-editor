@@ -3,10 +3,14 @@ import { computed, nextTick, onMounted, onBeforeUnmount, reactive, ref, shallowR
 import TinyEditor from '@tinymce/tinymce-vue';
 import type { Editor } from 'tinymce';
 import { FilePenLine, Save, Download, FolderOpen, Settings2, X, Check, LoaderCircle, History, Plus, RotateCcw, Puzzle, Code2, Eye, PenLine, ChevronDown, AlertCircle, Radio } from '@lucide/vue';
-import { documentHtml, persistDraft, readDraft, sampleContent, SETTINGS_KEY, type Draft } from './document';
+import { documentHtml, portableDocumentHtml, persistDraft, readDraft, sampleContent, SETTINGS_KEY, type Draft } from './document';
 import { defaultSettings, pluginNames, resolvePlugins, type Settings } from './plugins';
 import { editorOptions } from './editor';
 import LivePanel from './components/LivePanel.vue';
+import TextConfigPanel from './components/TextConfigPanel.vue';
+import ImageConfigPanel from './components/ImageConfigPanel.vue';
+import CanvasConfigPanel from './components/CanvasConfigPanel.vue';
+import DanmakuConfigPanel from './components/DanmakuConfigPanel.vue';
 import type { LiveMessage } from './bilibili';
 import { liveSession } from './live/session';
 import { bindDanmaku, bindDanmakuEditor, type Bindings } from './live/bindings';
@@ -21,7 +25,17 @@ const error = ref('');
 const toast = ref('');
 const view = ref<'edit' | 'html' | 'preview'>('edit');
 const source = ref('');
-const panel = ref<'plugins' | 'history' | 'live' | null>('live');
+type ConfigPanel = 'text' | 'image' | 'canvas' | 'danmaku';
+const activeConfigPanel = ref<ConfigPanel | null>(null);
+const textPanelActive = computed(() => activeConfigPanel.value === 'text');
+const imagePanelActive = computed(() => activeConfigPanel.value === 'image');
+const canvasPanelActive = computed(() => activeConfigPanel.value === 'canvas');
+const danmakuPanelActive = computed(() => activeConfigPanel.value === 'danmaku');
+function setConfigPanel(kind: ConfigPanel, active: boolean) {
+  if (active) activeConfigPanel.value = kind;
+  else if (activeConfigPanel.value === kind) activeConfigPanel.value = null;
+}
+const panel = ref<'plugins' | 'history' | 'live' | null>(null);
 const settingsOpen = ref(false);
 const exportOpen = ref(false);
 const fileInput = ref<HTMLInputElement>();
@@ -178,17 +192,19 @@ async function importFile(event: Event) {
 async function exportFile(format: 'html' | 'json' | 'txt') {
   await changeView(view.value === 'html' ? 'edit' : view.value);
   save();
-  const text = format === 'html' ? documentHtml(editorBindings?.snapshot(draft.content) ?? draft.content, draft.title)
-    : format === 'json' ? JSON.stringify(draft, null, 2)
-    : new DOMParser().parseFromString(draft.content, 'text/html').body.textContent || '';
-  const blob = new Blob([text], { type: format === 'html' ? 'text/html;charset=utf-8' : format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `${draft.title.replace(/[<>:"/\\|?*]/g, '_') || 'document'}.${format}`;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  exportOpen.value = false;
+  try {
+    const text = format === 'html' ? await portableDocumentHtml(editorBindings?.snapshot(draft.content) ?? draft.content, draft.title)
+      : format === 'json' ? JSON.stringify(draft, null, 2)
+      : new DOMParser().parseFromString(draft.content, 'text/html').body.textContent || '';
+    const blob = new Blob([text], { type: format === 'html' ? 'text/html;charset=utf-8' : format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${draft.title.replace(/[<>:"/\\|?*]/g, '_') || 'document'}.${format}`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    exportOpen.value = false;
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : '导出失败'; }
 }
 
 function openSettings() { Object.assign(pendingSettings, settings); settingsOpen.value = true; }
@@ -271,11 +287,15 @@ onBeforeUnmount(() => {
         <div v-if="view === 'html'" class="source-pane"><div class="source-header"><span>{{ draft.title }}.html</span><button class="text-button" @click="changeView('edit')"><Check :size="15" />应用修改</button></div><textarea v-model="source" aria-label="HTML 源码" spellcheck="false"></textarea></div>
         <div v-if="view === 'preview'" class="preview-pane"><iframe ref="previewFrame" title="文档预览" sandbox="allow-same-origin" :srcdoc="previewHtml" @load="bindPreview"></iframe></div>
       </section>
-      <aside v-show="panel === 'live'" class="side-panel live-panel" aria-label="直播弹幕面板">
+      <CanvasConfigPanel :editor="editor" :object-active="textPanelActive || imagePanelActive || danmakuPanelActive" :shown="canvasPanelActive" :enabled="view === 'edit' && ready" @active="setConfigPanel('canvas', $event)" />
+      <DanmakuConfigPanel :editor="editor" :shown="danmakuPanelActive" :enabled="view === 'edit' && ready" @active="setConfigPanel('danmaku', $event)" />
+      <ImageConfigPanel :editor="editor" :shown="imagePanelActive" :enabled="view === 'edit' && ready" @active="setConfigPanel('image', $event)" />
+      <TextConfigPanel :editor="editor" :shown="textPanelActive" :enabled="view === 'edit' && ready" @active="setConfigPanel('text', $event)" />
+      <aside v-show="panel === 'live' && !textPanelActive && !imagePanelActive && !canvasPanelActive && !danmakuPanelActive" class="side-panel live-panel" aria-label="直播弹幕面板">
         <div class="panel-heading"><h2>直播弹幕</h2><button class="icon-button" aria-label="收起直播弹幕" @click="panel = null"><X :size="17" /></button></div>
         <LivePanel :editor-ready="ready" @insert="insertLiveMessages" />
       </aside>
-      <aside v-if="panel && panel !== 'live'" class="side-panel">
+      <aside v-if="panel && panel !== 'live' && !textPanelActive && !imagePanelActive && !canvasPanelActive && !danmakuPanelActive" class="side-panel">
         <div class="panel-heading"><h2>{{ panel === 'plugins' ? '插件目录' : '本地版本' }}</h2><button class="icon-button" aria-label="关闭侧栏" @click="panel = null"><X :size="17" /></button></div>
         <template v-if="panel === 'plugins'"><input v-model="pluginSearch" class="search" placeholder="搜索插件" aria-label="搜索插件" /><div class="plugin-list"><div v-for="id in shownPlugins" :key="id" class="plugin-row"><div><strong>{{ pluginNames[id] || id }}</strong><code>{{ id }}</code></div><span class="plugin-status" :class="{ loaded: registeredPlugins.includes(id) }">{{ registeredPlugins.includes(id) ? '已注册' : configuredPlugins.includes(id) ? '待加载' : '未启用' }}</span></div></div><button class="panel-footer text-button" @click="openSettings"><Settings2 :size="15" />配置插件</button></template>
         <template v-else><button class="text-button history-save" :disabled="!ready" @click="save(true)"><Plus :size="16" />创建版本</button><p v-if="!draft.revisions.length" class="empty">暂无本地版本</p><div class="revision-list"><div v-for="revision in draft.revisions" :key="revision.revisionId" class="revision-row"><History :size="16" /><div><strong>{{ new Date(revision.createdAt).toLocaleString('zh-CN') }}</strong><small>{{ revision.author.name }}</small></div><button class="icon-button" :disabled="!ready" title="恢复此版本" aria-label="恢复此版本" @click="save(true); replaceContent(revision.content); notify('已恢复版本')"><RotateCcw :size="16" /></button></div></div></template>

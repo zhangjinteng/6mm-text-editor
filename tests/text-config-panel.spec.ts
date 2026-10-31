@@ -1,0 +1,68 @@
+import { expect, test, type Page } from '@playwright/test';
+const panel = (p: Page) => p.getByRole('complementary', { name: '文字配置面板' });
+const frame = (p: Page) => p.frameLocator('.tox-edit-area iframe');
+test.beforeEach(async ({ page }) => {
+  await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await page.evaluate(() => {
+    const e = window.tinymce.activeEditor;
+    e.setContent('<p><span id="a" data-text-draggable="true" style="position:absolute;left:50px;top:50px;font-size:32px;width:260px">第一段文字</span></p><p><span id="b" data-text-draggable="true" style="position:absolute;left:50px;top:180px;font-size:24px;width:260px">第二段文字</span></p>');
+    e.undoManager.clear(); e.undoManager.add();
+  });
+});
+test('选中文字同时显示工具栏与配置，实时修改并切换对象，空白取消', async ({ page }) => {
+  await expect(panel(page)).toBeHidden();
+  await frame(page).locator('body > p > #a').click();
+  await expect(panel(page)).toBeVisible();
+  await expect(page.locator('.tox-pop:visible [data-mce-name="textsettings"]')).toBeVisible();
+  await expect(panel(page).getByRole('textbox', { name: '字号', exact: true })).toHaveValue('32');
+  await panel(page).getByRole('textbox', { name: '字号', exact: true }).fill('48');
+  await expect(frame(page).locator('body > p > #a')).toHaveCSS('font-size', '48px');
+  await panel(page).getByRole('tab', { name: '动画', exact: true }).click();
+  await panel(page).getByRole('button', { name: 'pulse', exact: true }).click();
+  await expect(frame(page).locator('body > p > #a')).toHaveAttribute('data-text-animation', 'pulse');
+  await frame(page).locator('body > p > #b').click();
+  await expect(panel(page).getByRole('textbox', { name: '字号', exact: true })).toHaveValue('24');
+  await panel(page).getByRole('textbox', { name: '字号', exact: true }).fill('36');
+  await expect(frame(page).locator('body > p > #b')).toHaveCSS('font-size', '36px');
+  await expect(frame(page).locator('body > p > #a')).toHaveCSS('font-size', '48px');
+  await page.screenshot({ path: 'screenshots/text-config-panel-desktop.png' });
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.undo());
+  await expect(frame(page).locator('body > p > #b')).toHaveCSS('font-size', '24px');
+  await frame(page).locator('body > p > #a').click();
+  await frame(page).locator('body').click({ position: { x: 500, y: 350 } });
+  await expect(panel(page)).toBeHidden();
+});
+test('工具栏弹窗保留预览与取消，侧栏同步已应用的设置', async ({ page }) => {
+  await frame(page).locator('body > p > #a').click();
+  await expect(panel(page)).toBeVisible();
+  await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  const dialog = page.getByRole('dialog', { name: '文字设置', exact: true });
+  await dialog.getByRole('textbox', { name: '字号', exact: true }).fill('60');
+  await expect(frame(page).locator('body > p > #a')).toHaveCSS('font-size', '32px');
+  await dialog.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(panel(page).getByRole('textbox', { name: '字号', exact: true })).toHaveValue('32');
+  await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  await dialog.getByRole('textbox', { name: '字号', exact: true }).fill('40');
+  await dialog.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(panel(page).getByRole('textbox', { name: '字号', exact: true })).toHaveValue('40');
+  await panel(page).getByRole('button', { name: '收起文字配置', exact: true }).click();
+  await expect(panel(page)).toBeHidden();
+  await frame(page).locator('body > p > #a').click(); await expect(panel(page)).toBeVisible();
+});
+test('窄屏配置不遮住画布，锁定后可从配置解锁', async ({ page }) => {
+  await frame(page).locator('body > p > #a').click();
+  await panel(page).getByRole('tab', { name: '对象', exact: true }).click();
+  await panel(page).getByRole('checkbox', { name: '锁定文本框', exact: true }).click();
+  await expect(panel(page).getByRole('checkbox', { name: '锁定文本框', exact: true })).toBeChecked();
+  await expect(frame(page).locator('body > p > #a')).toHaveAttribute('data-text-locked', 'true');
+  await expect(panel(page).getByRole('tab', { name: '基础', exact: true })).toBeDisabled();
+  await panel(page).getByRole('checkbox', { name: '锁定文本框', exact: true }).click();
+  await expect(panel(page).getByRole('checkbox', { name: '锁定文本框', exact: true })).not.toBeChecked();
+  await expect(frame(page).locator('body > p > #a')).not.toHaveAttribute('data-text-locked');
+  await expect(panel(page).getByRole('tab', { name: '基础', exact: true })).toBeEnabled();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await panel(page).scrollIntoViewIfNeeded();
+  const bounds = (await panel(page).boundingBox())!;
+  expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: 'screenshots/text-config-panel-mobile.png' });
+});

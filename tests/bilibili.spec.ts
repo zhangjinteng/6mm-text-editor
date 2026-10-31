@@ -15,6 +15,9 @@ test('official SDK decodes messages, pauses/resumes, and explicitly ends the ses
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
   await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).not.toHaveClass('selected');
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
+  await page.getByRole('button', { name: '直播弹幕', exact: true }).click();
   await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).toHaveClass('selected');
   await page.getByRole('button', { name: '连接直播间' }).click();
   await expect(page.locator('.live-state strong')).toHaveText('已连接');
@@ -55,6 +58,9 @@ test('official SDK decodes messages, pauses/resumes, and explicitly ends the ses
 test('paused sessions survive refresh and polling without automatically reconnecting', async ({ page }) => {
   const commands = await mockPlatform(page);
   await page.goto('/');
+  await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).not.toHaveClass('selected');
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
+  await page.getByRole('button', { name: '直播弹幕', exact: true }).click();
   await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).toHaveClass('selected');
   await page.getByRole('button', { name: '连接直播间' }).click();
   await expect(page.locator('.live-state strong')).toHaveText('已连接');
@@ -62,6 +68,9 @@ test('paused sessions survive refresh and polling without automatically reconnec
   await expect(page.locator('.live-state strong')).toHaveText('已暂停');
   const deadline = await page.locator('.live-session-actions span').innerText();
   await page.reload();
+  await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).not.toHaveClass('selected');
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
+  await page.getByRole('button', { name: '直播弹幕', exact: true }).click();
   await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).toHaveClass('selected');
   await expect(page.locator('.live-state strong')).toHaveText('已暂停');
   await expect(page.locator('.live-session-actions span')).toHaveText(deadline);
@@ -77,6 +86,9 @@ test('paused sessions survive refresh and polling without automatically reconnec
 test('upstream business errors are visible and can be retried', async ({ page }) => {
   await mockPlatform(page, true);
   await page.goto('/');
+  await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).not.toHaveClass('selected');
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
+  await page.getByRole('button', { name: '直播弹幕', exact: true }).click();
   await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).toHaveClass('selected');
   await page.getByRole('button', { name: '连接直播间' }).click();
   await expect(page.locator('.live-state strong')).toHaveText('连接失败');
@@ -93,6 +105,9 @@ test('socket authentication rejection ends unusable credentials instead of retai
     });
   });
   await page.goto('/');
+  await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).not.toHaveClass('selected');
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
+  await page.getByRole('button', { name: '直播弹幕', exact: true }).click();
   await expect(page.getByRole('button', { name: '直播弹幕', exact: true })).toHaveClass('selected');
   await page.getByRole('button', { name: '连接直播间' }).click();
   await expect(page.locator('.live-state strong')).toHaveText('连接失败');

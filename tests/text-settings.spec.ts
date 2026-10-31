@@ -2,13 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 import type { Editor } from 'tinymce';
 declare global { interface Window { tinymce: { activeEditor: Editor } } }
 const box = (page: Page) => page.frameLocator('.tox-edit-area iframe').locator('#settings-text');
-const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body > [data-text-draggable]');
+const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body [data-text-draggable]');
 const dialog = (page: Page) => page.getByRole('dialog', { name: '文字设置', exact: true });
 async function open(page: Page) {
   await box(page).click();
   await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
   await expect(dialog(page)).toBeVisible();
   await expect(preview(page)).toContainText('预览我的文字');
+  await dialog(page).getByRole('tab', { name: '外观', exact: true }).click();
   return dialog(page);
 }
 test.beforeEach(async ({ page }) => {
@@ -22,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 test('one toolbar entry opens all effects; previews stay isolated and apply as one undo step', async ({ page }) => {
   const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
   const d = await open(page);
-  await expect(d.getByRole('tablist', { name: '文字设置分类', exact: true }).getByRole('tab')).toHaveCount(3);
+  await expect(d.getByRole('tablist', { name: '文字设置分类', exact: true }).getByRole('tab')).toHaveCount(9);
   await d.getByRole('textbox', { name: '整体不透明度（0—100%）', exact: true }).fill('65');
   await expect(preview(page)).toHaveCSS('opacity', '0.65'); await expect(box(page)).toHaveCSS('opacity', '1');
   await d.getByRole('tab', { name: '描边', exact: true }).click();
@@ -69,7 +70,8 @@ test('Escape and close discard changes; keyboard tabs and narrow layout remain u
   await d.getByRole('tab', { name: '外观', exact: true }).press('ArrowRight');
   await expect(d.getByRole('tab', { name: '填充', exact: true })).toHaveAttribute('aria-selected', 'true');
   await d.getByRole('tab', { name: '填充', exact: true }).press('End');
-  await expect(d.getByRole('tab', { name: '变形', exact: true })).toBeFocused();
+  await expect(d.getByRole('tab', { name: '对象', exact: true })).toBeFocused();
+  await d.getByRole('tab', { name: '变形', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(preview(page)).toBeVisible();
   const bounds = (await d.boundingBox())!; expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390);
@@ -78,4 +80,73 @@ test('Escape and close discard changes; keyboard tabs and narrow layout remain u
   await page.screenshot({ path: 'screenshots/text-settings-mobile.png' });
   await d.getByRole('button', { name: '关闭文字设置', exact: true }).click();
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+});
+
+test('basic settings replace toolbar controls, preview in isolation, apply together, persist and undo', async ({ page }) => {
+  const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
+  await box(page).click();
+  const toolbar = page.locator('.tox-pop:visible');
+  await expect(toolbar.locator('[data-mce-name="fontfamily"], [data-mce-name="fontsizeinput"], [data-mce-name="forecolor"], [data-mce-name="backcolor"]')).toHaveCount(0);
+  await toolbar.locator('[data-mce-name="textsettings"]').click();
+  const d = dialog(page);
+  await expect(d.getByRole('tab', { name: '基础', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(d.getByRole('textbox', { name: '字号', exact: true })).toHaveValue('38');
+  await d.getByRole('combobox', { name: '字体', exact: true }).selectOption({ label: '抖音美好体' });
+  await d.getByRole('textbox', { name: '字号', exact: true }).fill('42');
+  await d.getByRole('button', { name: '增大字号', exact: true }).click();
+  await expect(d.getByRole('textbox', { name: '字号', exact: true })).toHaveValue('43');
+  await d.getByRole('button', { name: '减小字号', exact: true }).click();
+  await d.getByRole('textbox', { name: '文字颜色', exact: true }).fill('#3598db');
+  await d.getByRole('textbox', { name: '背景颜色', exact: true }).fill('#f1c40f');
+  await expect(preview(page).locator('strong')).toHaveCSS('font-size', '42px');
+  await expect(preview(page).locator('strong')).toHaveCSS('color', 'rgb(53, 152, 219)');
+  await expect(preview(page).locator('[style*="background-color"]')).toHaveCSS('background-color', 'rgb(241, 196, 15)');
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  await page.screenshot({ path: 'screenshots/text-settings-basic-desktop.png' });
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(box(page).locator('strong')).toHaveCSS('font-size', '42px');
+  await expect(box(page).locator('strong')).toHaveCSS('color', 'rgb(53, 152, 219)');
+  await expect(box(page)).toHaveCSS('left', '100px'); await expect(box(page)).toHaveCSS('width', '360px');
+  const applied = await page.evaluate(() => window.tinymce.activeEditor.getContent());
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.undo());
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  await page.evaluate(() => window.tinymce.activeEditor.undoManager.redo());
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(applied);
+  await page.getByRole('button', { name: '保存文档', exact: true }).click(); await page.reload();
+  await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
+  await box(page).click(); await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  await expect(d.getByRole('textbox', { name: '字号', exact: true })).toHaveValue('42');
+  await expect(d.getByRole('textbox', { name: '文字颜色', exact: true })).toHaveValue('rgb(53, 152, 219)');
+  await d.getByRole('button', { name: '清除背景颜色', exact: true }).click();
+  await expect(preview(page).locator('[style*="background-color"]')).toHaveCount(0);
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(box(page).locator('[style*="background-color"]')).toHaveCount(0);
+});
+
+test('basic validation and cancel preserve rich formatting; changed fonts update curved output', async ({ page }) => {
+  const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
+  await box(page).click(); await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click();
+  const d = dialog(page);
+  await d.getByRole('textbox', { name: '字号', exact: true }).fill('0');
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(d.getByRole('alert')).toContainText('1—1000');
+  await d.getByRole('textbox', { name: '字号', exact: true }).fill('52');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'screenshots/text-settings-basic-mobile.png' });
+  await d.getByRole('button', { name: '取消', exact: true }).click();
+  expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await open(page);
+  await d.getByRole('tab', { name: '变形', exact: true }).click();
+  await d.getByRole('button', { name: '上拱', exact: true }).click();
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await open(page); await d.getByRole('tab', { name: '基础', exact: true }).click();
+  await d.getByRole('textbox', { name: '字号', exact: true }).fill('50');
+  await d.getByRole('textbox', { name: '文字颜色', exact: true }).fill('#ff0000');
+  await expect(preview(page).locator('svg text').first()).toHaveAttribute('font-size', '50');
+  await expect(preview(page).locator('svg text').first()).toHaveAttribute('fill', 'rgb(255, 0, 0)');
+  await d.getByRole('button', { name: '重置效果', exact: true }).click();
+  await expect(d.getByRole('textbox', { name: '字号', exact: true })).toHaveValue('50');
+  await d.getByRole('button', { name: '应用设置', exact: true }).click();
+  await expect(box(page).locator('strong')).toHaveCSS('font-size', '50px');
 });

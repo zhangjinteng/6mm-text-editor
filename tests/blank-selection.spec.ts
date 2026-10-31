@@ -17,7 +17,7 @@ test('图片选中后点击画布及行尾空白，只取消选中，不激活�
   for (const [x,y] of [[700,180],[700,325]]) {
     await image.click();await expect(page.locator('.tox-pop [data-mce-name="imagefill"]')).toBeVisible();
     await page.mouse.click(area.x+x,area.y+y);await page.waitForTimeout(150);
-    await expect(handle).toBeHidden();await expect(page.locator('.tox-pop [data-mce-name="backcolor"]')).toBeVisible();
+    await expect(handle).toBeHidden();await expect(page.locator('.tox-pop [data-mce-name="canvassettings"]')).toBeVisible();
     await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toHaveCount(0);
     await expect(page.locator('.tox-pop [data-mce-name="imagefill"]')).toHaveCount(0);
     await expect(frame.locator('.object-selection-frame')).toBeHidden();
@@ -25,10 +25,11 @@ test('图片选中后点击画布及行尾空白，只取消选中，不激活�
     expect(await page.evaluate(()=>window.tinymce.activeEditor.selection.getNode().closest('[data-text-draggable]')!==null)).toBe(false);
   }
   await text.click();await expect(handle).toBeVisible();
-  await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toBeVisible();
+  await expect(page.locator('.tox-pop [data-mce-name="textdrag"]')).toHaveCount(0);
+  await expect(page.locator('.tox-pop [data-mce-name="textsettings"]')).toBeVisible();
   await text.dblclick();
   await page.keyboard.press('End');await page.keyboard.down('Shift');await page.keyboard.press('Home');await page.keyboard.up('Shift');
-  await expect(page.locator('.tox-pop [data-mce-name="textgroupstyle"]')).toBeVisible();
+  await expect(page.locator('.tox-pop [data-mce-name="textsettings"]')).toBeVisible();
   expect(await page.evaluate(()=>window.tinymce.activeEditor.selection.getContent({format:'text'}))).not.toBe('');
   await page.mouse.click(area.x+800,area.y+400);await expect(handle).toBeHidden();
   await frame.locator('#plain').dblclick({position:{x:25,y:14}});

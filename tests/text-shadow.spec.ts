@@ -4,11 +4,11 @@ import type { Editor } from 'tinymce';
 import type { TextShadow } from '../src/text-shadow';
 declare global { interface Window { tinymce: { activeEditor: Editor } } }
 const box = (page: Page) => page.frameLocator('.tox-edit-area iframe').locator('#shadow-text');
-const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body > [data-text-draggable]');
+const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body [data-text-draggable]');
 const dialog = (page: Page) => page.getByRole('dialog', { name: '文字设置', exact: true });
 const field = (page: Page, name: string) => dialog(page).getByRole('textbox', { name, exact: true });
 const button = (page: Page, name: string) => dialog(page).getByRole('button', { name, exact: true });
-async function open(page: Page) { await box(page).click(); await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click(); await dialog(page).getByRole('tab', { name: '投影', exact: true }).click(); }
+async function open(page: Page) { await box(page).click(); await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click(); await dialog(page).getByRole('tab', { name: '外观', exact: true }).click(); await dialog(page).getByRole('tab', { name: '投影', exact: true }).click(); }
 const stored = async (page: Page): Promise<TextShadow | null> => JSON.parse((await box(page).getAttribute('data-text-shadow')) || 'null');
 const content = (page: Page) => page.evaluate(() => window.tinymce.activeEditor.getContent());
 async function apply(page: Page) { await button(page, '应用设置').click(); await expect(dialog(page)).toHaveCount(0); }
@@ -42,6 +42,7 @@ test('legacy CSS migrates, hiding preserves every parameter across reload, while
 test('direction dial supports presets, dragging, keyboard, zero distance and Escape without closing the modal', async ({ page }) => {
   await open(page); await button(page, '添加投影').click(); await field(page, '投影距离').fill('20'); await button(page, '设置投影方向').click();
   const dial = dialog(page).getByRole('slider', { name: '投影方向', exact: true }); await button(page, '向上投影').click(); await expect(field(page, '投影角度')).toHaveValue('90'); await expect(preview(page)).toHaveCSS('text-shadow', 'rgba(0, 0, 0, 0.5) 0px -20px 4px');
+  await dial.scrollIntoViewIfNeeded();
   const bounds = (await dial.boundingBox())!; await page.mouse.move(bounds.x + bounds.width * .85, bounds.y + bounds.height * .5); await page.mouse.down(); await page.mouse.move(bounds.x + bounds.width * .5, bounds.y + bounds.height * .85, { steps: 8 }); await page.mouse.up();
   expect(Number(await field(page, '投影角度').inputValue())).toBeCloseTo(-90, 0); await dial.press('Home'); await expect(field(page, '投影角度')).toHaveValue('0'); await dial.press('Shift+ArrowRight'); await expect(field(page, '投影角度')).toHaveValue('15');
   await field(page, '投影距离').fill('0'); await expect(preview(page)).toHaveCSS('text-shadow', 'rgba(0, 0, 0, 0.5) 0px 0px 4px'); await page.keyboard.press('Escape'); await expect(dial).toBeHidden(); await expect(dialog(page)).toBeVisible();
@@ -72,7 +73,7 @@ test('shadow alpha stays independent of filled curved text, duplicates and stand
 });
 test('narrow modal keeps preview, shadow controls and direction actions usable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: '收起直播弹幕', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden();
   await page.evaluate(() => { const e = window.tinymce.activeEditor; const node = e.getBody().querySelector<HTMLElement>('#shadow-text')!; e.dom.setStyle(node, 'width', '220px'); e.dispatch('ResizeContent'); });
   await open(page); await button(page, '添加投影').click(); await field(page, '投影不透明度').fill('65'); await button(page, '设置投影方向').click(); await button(page, '向右下投影').click();
   await expect(preview(page)).toBeVisible(); const bounds = (await dialog(page).boundingBox())!; expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390); await page.screenshot({ path: 'screenshots/text-shadow-mobile.png' });

@@ -61,7 +61,7 @@ test('文字、图片、弹幕工具栏共用居下/居右位置，切换对象�
   });
   const popup = page.locator('.tox-pop:visible');
   await checkPosition(page, 'bottom');
-  await expect(popup.locator('[data-mce-name="textgroupstyle"]')).toBeVisible();
+  await expect(popup.locator('[data-mce-name="textsettings"]')).toBeVisible();
   await popup.locator('[data-mce-name="toolbarposition"]').click();
   await checkPosition(page, 'right');
   await (await textTool(page, 'forecolor-chevron')).click();
@@ -73,7 +73,7 @@ test('文字、图片、弹幕工具栏共用居下/居右位置，切换对象�
   await popup.locator('[data-mce-name="toolbarposition"]').click();
   await checkPosition(page, 'bottom');
   await page.frameLocator('.tox-edit-area iframe').locator('[data-danmaku-source]').click();
-  await expect(popup.locator('[data-mce-name="danmakualignleft"]')).toBeVisible();
+  await expect(popup.locator('[data-mce-name="danmakusettings"]')).toBeVisible();
   await checkPosition(page, 'bottom');
   await popup.locator('[data-mce-name="toolbarposition"]').click();
   await checkPosition(page, 'right');
@@ -82,7 +82,7 @@ test('文字、图片、弹幕工具栏共用居下/居右位置，切换对象�
   await popup.locator('[data-mce-name="toolbarposition"]').click();
   await checkPosition(page, 'bottom');
   await page.evaluate(() => { window.tinymce.activeEditor.focus(); window.tinymce.activeEditor.selection.select(window.tinymce.activeEditor.getBody().querySelector('#text')!, true); window.tinymce.activeEditor.fire('mouseup'); });
-  await expect(popup.locator('[data-mce-name="textgroupstyle"]')).toBeVisible();
+  await expect(popup.locator('[data-mce-name="textsettings"]')).toBeVisible();
   await checkPosition(page, 'bottom');
 });
 
@@ -140,7 +140,7 @@ test('全屏仅在画布工具栏显示并可进入和退出全屏', async ({ pa
   }
 });
 
-test('表情符号仅在画布工具栏显示并可插入', async ({ page }) => {
+test('表情符号在画布设置中显示并可插入', async ({ page }) => {
   await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   await page.evaluate(() => {
     const e = window.tinymce.activeEditor;
@@ -163,10 +163,11 @@ test('表情符号仅在画布工具栏显示并可插入', async ({ page }) => 
       await expect(page.locator('.tox-toolbar-overlord [data-mce-name="emoticons"]')).toHaveCount(0);
       continue;
     }
-    await expect(popup.locator('[data-mce-name="emoticons"]')).toHaveCount(1);
+    await expect(popup.locator('[data-mce-name="canvassettings"]')).toHaveCount(1);
     await checkPosition(page, 'bottom');
-    await popup.locator('[data-mce-name="emoticons"]').click();
-    const dialog = page.getByRole('dialog');
+    await popup.locator('[data-mce-name="canvassettings"]').click();
+    await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '表情符号', exact: true }).click();
+    const dialog = page.getByRole('dialog').filter({ has: page.getByRole('textbox', { name: '搜索', exact: true }) });
     await expect(dialog.getByRole('textbox', { name: '搜索', exact: true })).toBeVisible();
     if (kind === 'blank') {
       await dialog.getByRole('textbox', { name: '搜索', exact: true }).fill('grinning');
@@ -177,6 +178,7 @@ test('表情符号仅在画布工具栏显示并可插入', async ({ page }) => 
       const symbol = await emoji.innerText();
       await emoji.click();
       await expect(dialog).toHaveCount(0);
+    await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
       await expect(frame.locator('body')).toContainText(symbol.trim());
       await expect(frame.locator('[data-danmaku-source]')).not.toContainText(symbol.trim());
     } else {
@@ -199,14 +201,16 @@ for (const origin of ['image', 'danmaku']) {
     const area = (await page.locator('.tox-edit-area iframe').boundingBox())!;
     await page.mouse.click(area.x + area.width - 20, area.y + 30);
     const popup = page.locator('.tox-pop:visible');
-    await expect(popup.locator('[data-mce-name="canvasimage"]')).toHaveCount(1);
-    await popup.locator('[data-mce-name="canvasimage"]').click();
-    const dialog = page.getByRole('dialog');
+    await expect(popup.locator('[data-mce-name="canvassettings"]')).toHaveCount(1);
+    await popup.locator('[data-mce-name="canvassettings"]').click();
+    await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '插入图片', exact: true }).click();
+    const dialog = page.getByRole('dialog').filter({ has: page.getByRole('combobox', { name: '地址', exact: true }) });
     await expect(dialog.getByRole('combobox', { name: '地址', exact: true })).toHaveValue('');
     await dialog.getByRole('combobox', { name: '地址', exact: true }).fill('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
     await dialog.getByRole('textbox', { name: '替代描述', exact: true }).fill('画布插入图片');
     await dialog.getByRole('button', { name: '保存', exact: true }).click();
     await expect(dialog).toHaveCount(0);
+    await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
     await expect(frame.locator('img')).toHaveCount(2);
     await expect(frame.locator('img[alt="原有图片"]')).toHaveCount(1);
     await expect(frame.locator('[data-danmaku-source] img')).toHaveCount(0);

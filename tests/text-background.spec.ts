@@ -5,7 +5,7 @@ import type { TextBackground } from '../src/text-background';
 declare global { interface Window { tinymce: { activeEditor: Editor } } }
 const frame = (page: Page) => page.frameLocator('.tox-edit-area iframe');
 const box = (page: Page) => frame(page).locator('#background-text');
-const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body > [data-text-draggable]');
+const preview = (page: Page) => page.frameLocator('iframe[title="文字效果预览"]').locator('body [data-text-draggable]');
 const background = (node: Locator) => node.locator(':scope > [data-text-background-render]');
 const dialog = (page: Page) => page.getByRole('dialog', { name: '文字设置', exact: true });
 const field = (page: Page, name: string) => dialog(page).getByRole('textbox', { name, exact: true });
@@ -13,7 +13,7 @@ const button = (page: Page, name: string) => dialog(page).getByRole('button', { 
 const preset = (page: Page, name: string) => dialog(page).getByRole('listbox', { name: '背景样式', exact: true }).getByRole('option', { name, exact: true });
 const content = (page: Page) => page.evaluate(() => window.tinymce.activeEditor.getContent());
 const stored = async (page: Page): Promise<TextBackground | null> => JSON.parse((await box(page).getAttribute('data-text-background-settings')) || 'null');
-async function open(page: Page) { await box(page).click(); await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click(); await dialog(page).getByRole('tab', { name: '背景', exact: true }).click(); }
+async function open(page: Page) { await box(page).click(); await page.locator('.tox-pop:visible [data-mce-name="textsettings"]').click(); await dialog(page).getByRole('tab', { name: '外观', exact: true }).click(); await dialog(page).getByRole('tab', { name: '背景', exact: true }).click(); }
 async function apply(page: Page) { await button(page, '应用设置').click(); await expect(dialog(page)).toHaveCount(0); }
 async function textGeometry(node: Locator) {
   return node.evaluate(box => { const origin = box.getBoundingClientRect(); return Array.from(box.querySelectorAll('.row1,.row2,.row3')).map(node => { const rect = node.getBoundingClientRect(); return [rect.x - origin.x, rect.y - origin.y, rect.width, rect.height].map(n => Math.round(n * 100) / 100); }); });
@@ -92,5 +92,5 @@ test('preset keyboard navigation, invalid drafts, visibility cancellation and na
   await open(page); const before = await content(page); await preset(page, '无背景').press('ArrowRight'); await expect(preset(page, '连体背景')).toHaveAttribute('aria-selected', 'true'); await preset(page, '连体背景').press('ArrowDown'); await expect(preset(page, '圆角背景')).toHaveAttribute('aria-selected', 'true');
   await field(page, '水平扩张').fill('101'); await button(page, '应用设置').click(); await expect(dialog(page).getByRole('alert')).toBeVisible(); expect(await content(page)).toBe(before); await field(page, '水平扩张').fill('10'); await field(page, '背景颜色').fill('url(https://example.com/x)'); await button(page, '应用设置').click(); await expect(dialog(page).getByRole('alert')).toContainText('颜色'); await field(page, '背景颜色').fill('#ff000080'); await expect(field(page, '背景不透明度')).toHaveValue('50');
   await button(page, '隐藏背景').click(); await expect(background(preview(page))).toHaveCount(0); await button(page, '取消').click(); expect(await content(page)).toBe(before);
-  await page.setViewportSize({ width: 390, height: 844 }); await page.getByRole('button', { name: '收起直播弹幕', exact: true }).click(); await open(page); await preset(page, '云朵背景').click(); await expect(background(preview(page))).toBeVisible(); const bounds = (await dialog(page).boundingBox())!; expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390); await page.screenshot({ path: 'screenshots/text-background-mobile.png' }); await apply(page);
+  await page.setViewportSize({ width: 390, height: 844 }); await expect(page.getByRole('complementary', { name: '直播弹幕面板' })).toBeHidden(); await open(page); await preset(page, '云朵背景').click(); await expect(background(preview(page))).toBeVisible(); const bounds = (await dialog(page).boundingBox())!; expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.width).toBeLessThanOrEqual(390); await page.screenshot({ path: 'screenshots/text-background-mobile.png' }); await apply(page);
 });

@@ -26,13 +26,13 @@ test('全部滤镜可预览并调强度，与基础调色叠加，取消不写�
   }
   await d.getByRole('button', { name: '黑白', exact: true }).click();
   await d.getByRole('slider', { name: '滤镜强度', exact: true }).fill('50');
-  await expect(d.locator('img')).toHaveCSS('filter', /grayscale\(0.5\)/);
+  await expect(d.locator('.image-settings-preview img')).toHaveCSS('filter', /grayscale\(0.5\)/);
   await d.getByRole('tab', { name: '外观', exact: true }).click(); await d.getByRole('slider', { name: '亮度', exact: true }).fill('120');
-  await expect(d.locator('img')).toHaveCSS('filter', /brightness\(1.2\).*grayscale\(0.5\)/);
+  await expect(d.locator('.image-settings-preview img')).toHaveCSS('filter', /brightness\(1.2\).*grayscale\(0.5\)/);
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(original);
   await d.getByRole('button', { name: '取消', exact: true }).click(); expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(original);
   d = await open(page); await d.getByRole('tab', { name: '滤镜', exact: true }).click(); await d.getByRole('button', { name: '黑白', exact: true }).click();
-  await d.getByRole('slider', { name: '滤镜强度', exact: true }).fill('0'); await expect(d.locator('img')).not.toHaveCSS('filter', /grayscale/);
+  await d.getByRole('slider', { name: '滤镜强度', exact: true }).fill('0'); await expect(d.locator('.image-settings-preview img')).not.toHaveCSS('filter', /grayscale/);
   await d.getByRole('slider', { name: '滤镜强度', exact: true }).fill('50'); await d.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(image).toHaveCSS('filter', /grayscale\(0.5\)/);
   d = await open(page); await d.getByRole('tab', { name: '滤镜', exact: true }).click();

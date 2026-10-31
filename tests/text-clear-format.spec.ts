@@ -41,7 +41,7 @@ for (const full of [false, true]) {
   });
 }
 
-test('清除局部标题后同时清除标题标记，按钮高亮恢复', async ({ page }) => {
+test('清除局部标题后同时清除标题标记', async ({ page }) => {
   await page.goto('/'); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   await page.evaluate(() => {
     const e = window.tinymce.activeEditor; e.setContent('<p>前选后</p>');
@@ -49,8 +49,8 @@ test('清除局部标题后同时清除标题标记，按钮高亮恢复', async
     e.focus(); e.selection.setRng(range); e.nodeChanged(); e.dispatch('mouseup');
   });
   const toolbar = page.locator('.tox-pop:visible');
-  await (await textTool(page, 'h2')).click();
+  await page.evaluate(() => window.tinymce.activeEditor.execCommand('mceToggleFormat', false, 'h2'));
   await (await textTool(page, 'removeformat')).click();
   await expect(page.frameLocator('.tox-edit-area iframe').locator('[data-selection-heading]')).toHaveCount(0);
-  await expect((await textTool(page, 'h2'))).toHaveAttribute('aria-pressed', 'false');
+  await expect(toolbar.locator('[data-mce-name="textgroupparagraph"]')).toHaveCount(0);
 });

@@ -5,7 +5,8 @@ declare global { interface Window { tinymce: { activeEditor: Editor } } }
 async function openTextDialog(page: Page) {
   const area = (await page.locator('.tox-edit-area iframe').boundingBox())!;
   await page.mouse.click(area.x + 250, area.y + 170);
-  await page.locator('.tox-pop:visible [data-mce-name="canvastext"]').click();
+  await page.locator('.tox-pop:visible [data-mce-name="canvassettings"]').click();
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '插入文字', exact: true }).click();
   return page.getByRole('dialog', { name: '插入文字', exact: true });
 }
 test.beforeEach(async ({ page }) => {
@@ -22,6 +23,7 @@ test('画布插入纯文本和换行，位于点击处，可拖动、撤销重�
   await dialog.getByRole('textbox', { name: '文本内容', exact: true }).fill(text);
   await dialog.getByRole('button', { name: '插入', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   const frame = page.frameLocator('.tox-edit-area iframe');
   const inserted = frame.locator('[data-text-draggable]');
   await expect(inserted).toHaveText(text);
@@ -57,11 +59,12 @@ test('取消或仅输入空格不插入文字，按钮只存在于画布工具�
   await dialog.getByRole('textbox', { name: '文本内容', exact: true }).fill('  \n  ');
   await expect(dialog.getByRole('button', { name: '插入', exact: true })).toBeDisabled();
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
+  await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
   await page.frameLocator('.tox-edit-area iframe').getByText('原有文字', { exact: true }).click({ position: { x: 10, y: 10 } });
   await page.evaluate(() => {
     const e = window.tinymce.activeEditor; e.focus(); e.selection.select(e.getBody().querySelector('p')!, true); e.nodeChanged(); e.dispatch('mouseup');
   });
-  await expect(page.locator('.tox-pop:visible [data-mce-name="textgroupstyle"]')).toBeVisible();
+  await expect(page.locator('.tox-pop:visible [data-mce-name="textsettings"]')).toBeVisible();
   await expect(page.locator('.tox-pop:visible [data-mce-name="canvastext"]')).toHaveCount(0);
 });

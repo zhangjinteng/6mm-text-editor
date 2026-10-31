@@ -1,9 +1,11 @@
 import type { Editor } from 'tinymce';
 import { contentBounds } from './object-layout';
 import { imageGeometry, rotatePoint } from './image-geometry';
+import { enableImageSelection } from './image-selection';
 
 /** 图片与弹幕共用的选中框；辅助层不进入文档，缩放只提交一个撤销步骤。 */
 export function enableObjectSelection(editor: Editor): () => void {
+  const disposeImageSelection = enableImageSelection(editor);
   const doc = editor.getDoc();
   const overlay = doc.createElement('div');
   overlay.setAttribute('data-mce-bogus', 'all');
@@ -53,12 +55,15 @@ export function enableObjectSelection(editor: Editor): () => void {
     }
     selected = target?.closest<HTMLElement>('div[data-danmaku-source], img:not([data-mce-object]):not([data-mce-placeholder])') ?? undefined;
     if (selected?.parentElement?.closest('div[data-danmaku-source]')) selected = undefined;
+    editor.dispatch('ObjectSelectionChanged', { element: selected });
     // 弹幕按下事件由拖动逻辑接管，TinyMCE 不会自动取消上一张图片的选中状态。
     editor.selection.controlSelection.hideResizeRect();
     for (const previous of doc.body.querySelectorAll('img[data-mce-selected], div[data-danmaku-source][data-mce-selected]')) {
       previous.removeAttribute('data-mce-selected');
     }
     if (selected?.matches('div[data-danmaku-source]')) {
+      // 弹幕阻止默认按下事件，先聚焦，避免模式切换后恢复旧文字选区。
+      editor.focus();
       editor.selection.setCursorLocation(selected, 0);
       editor.nodeChanged();
     }
@@ -80,6 +85,13 @@ export function enableObjectSelection(editor: Editor): () => void {
     const visualDeltaX = Math.abs(Math.cos(radians)) * dw + Math.abs(Math.sin(radians)) * dh;
     const visualDeltaY = Math.abs(Math.sin(radians)) * dw + Math.abs(Math.cos(radians)) * dh;
     return { width, height, x: shift.x - visualDeltaX / 2, y: shift.y - visualDeltaY / 2, translateX: shift.x - dw / 2, translateY: shift.y - dh / 2 };
+  }
+  function click(event: MouseEvent) {
+    const element = (event.target as Element | null)?.closest<HTMLElement>('div[data-danmaku-source]');
+    if (!element || element !== selected || editor.mode.isReadOnly()) return;
+    // 浏览器在释放指针时可能把 Shadow DOM 宿主选区移到邻近文字，点击完成后恢复对象选中。
+    editor.focus(); editor.selection.setCursorLocation(element, 0); editor.nodeChanged();
+    event.preventDefault();
   }
   function move(event: PointerEvent) {
     if (!resize || resize.pointer !== event.pointerId) return;
@@ -147,12 +159,13 @@ export function enableObjectSelection(editor: Editor): () => void {
   function key(event: KeyboardEvent) {
     if (event.key === 'Escape' && resize) { cancel(); event.preventDefault(); event.stopImmediatePropagation(); }
   }
-  function reset() { cancel(); selected = undefined; update(); }
+  function reset() { cancel(); selected = undefined; update(); editor.dispatch('ObjectSelectionChanged', { element: undefined }); }
   const changes = new MutationObserver((records) => {
     if (records.some((record) => !overlay.contains(record.target))) update();
   });
   changes.observe(doc.body, { subtree: true, attributes: true, attributeFilter: ['style'] });
   doc.addEventListener('pointerdown', down, true);
+  doc.addEventListener('click', click, true);
   doc.addEventListener('pointermove', move, true);
   doc.addEventListener('pointerup', up, true);
   doc.addEventListener('pointercancel', cancel, true);
@@ -163,8 +176,10 @@ export function enableObjectSelection(editor: Editor): () => void {
   editor.on('BeforeSetContent TextBoxSelected', reset);
   editor.on('NodeChange Undo Redo ScrollContent ResizeContent SwitchMode DisabledStateChange', update);
   return () => {
+    disposeImageSelection();
     changes.disconnect(); selected = undefined; cancel(); overlay.remove(); preview.remove();
     doc.removeEventListener('pointerdown', down, true); doc.removeEventListener('pointermove', move, true); doc.removeEventListener('pointerup', up, true);
+    doc.removeEventListener('click', click, true);
     doc.removeEventListener('pointercancel', cancel, true); doc.removeEventListener('lostpointercapture', cancel, true); doc.removeEventListener('keydown', key, true); doc.removeEventListener('scroll', update, true);
     editor.off('BeforeExecCommand', alignObject);
     editor.off('BeforeSetContent TextBoxSelected', reset); editor.off('NodeChange Undo Redo ScrollContent ResizeContent SwitchMode DisabledStateChange', update);
