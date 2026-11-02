@@ -374,7 +374,7 @@ test('弹幕设置左右居中对齐，坐标持久化且不改变消息文字�
   const reference = (await frame.locator('#alignment-reference').boundingBox())!;
   const initial = (await region.boundingBox())!;
   const textAlign = await region.evaluate((node) => getComputedStyle(node).textAlign);
-  for (const [label, ratio] of [['居中对齐', 0.5], ['右对齐', 1], ['左对齐', 0]] as const) {
+  for (const [label, ratio] of [['水平居中', 0.5], ['贴右侧', 1], ['贴左侧', 0]] as const) {
     await region.click({ position: { x: 20, y: 20 } });
     const toolbar = page.locator('.tox-pop:visible');
     await expect(toolbar.getByRole('button')).toHaveCount(2);

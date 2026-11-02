@@ -3,13 +3,14 @@ import { nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { X } from '@lucide/vue';
 import type { Editor } from 'tinymce';
 import { isBlankSelection } from '../blank-selection';
-import { alignments, applyDanmakuSettings, readDanmakuSettings, type Alignment } from '../live/settings';
+import { applyDanmakuSettings, readDanmakuSettings } from '../live/settings';
 import '../danmaku-config-panel.css';
+import { layerPositions, type LayerPosition } from '../layer-position';
 
 const props = defineProps<{ editor?: Editor; enabled: boolean; shown?: boolean }>();
 const emit = defineEmits<{ active: [value: boolean] }>();
 const target = shallowRef<HTMLElement>();
-const state = ref<{ alignment: Alignment; layer: number; count: number }>({ alignment: '', layer: 0, count: 0 });
+const state = ref({ layer: 0, count: 0, positions: [] as LayerPosition[] });
 let dismissed: HTMLElement | undefined;
 let detach: (() => void) | undefined;
 function valid(element?: Element | null): HTMLElement | undefined {
@@ -30,7 +31,7 @@ function select(element?: HTMLElement) {
   });
 }
 function close() { dismissed = target.value; select(); }
-function apply(settings: { alignment?: Alignment; layer?: number }) {
+function apply(settings: { positions?: LayerPosition[]; layer?: number }) {
   if (props.editor && props.enabled && target.value) applyDanmakuSettings(props.editor, target.value, settings);
 }
 watch(() => [props.editor, props.enabled] as const, ([editor, enabled]) => {
@@ -79,11 +80,11 @@ onBeforeUnmount(() => detach?.());
     </header>
     <div class="danmaku-settings-body">
       <section>
-        <h3>对齐</h3>
-        <div class="danmaku-settings-align" role="group" aria-label="弹幕对齐">
-          <button v-for="[key, label] in alignments" :key="key" type="button" :aria-pressed="state.alignment === key" @click="apply({ alignment: key })">{{ label }}</button>
+        <div class="layer-position-controls"><h3>图层位置</h3>
+          <div class="layer-position-actions" role="group" aria-label="图层位置">
+            <button v-for="[key, label] in layerPositions" :key="key" type="button" :aria-pressed="state.positions.includes(key)" @click="apply({ positions: [key] })">{{ label }}</button>
+          </div>
         </div>
-        <p class="danmaku-settings-hint">对齐弹幕框，不改变消息文字的对齐方式。</p>
       </section>
       <section>
         <h3>图层设置 <span>第 {{ state.layer }} / {{ state.count }} 层</span></h3>

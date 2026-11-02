@@ -73,7 +73,9 @@ for (const angle of [30, 90, -45]) test(`旋转 ${angle}° 并翻转后，拖动
   await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2); await page.mouse.down();
   await page.mouse.move(handle.x + handle.width / 2 + dx, handle.y + handle.height / 2 + dy, { steps: 6 });
   const during = (await image.boundingBox())!; await page.mouse.up();
-  await expect(image).toHaveCSS('width', '240px'); await expect(image).toHaveCSS('height', '120px');
+  // Rotated pointer coordinates can round to an adjacent browser layout subpixel.
+  const size = await image.evaluate(el => ({ width: parseFloat(getComputedStyle(el).width), height: parseFloat(getComputedStyle(el).height) }));
+  expect(size.width).toBeCloseTo(240, 1); expect(size.height).toBeCloseTo(120, 1);
   const anchorAfter = (await frame.locator('#objectResizeHandlenw').boundingBox())!;
   expect(anchorAfter.x).toBeCloseTo(anchorBefore.x, 0); expect(anchorAfter.y).toBeCloseTo(anchorBefore.y, 0);
   const after = (await image.boundingBox())!; expect(after.x).toBeCloseTo(during.x, 0); expect(after.y).toBeCloseTo(during.y, 0);

@@ -1,4 +1,5 @@
 import type { Editor } from 'tinymce';
+import { syncImageAnimation } from './image-animation';
 import { maskAsset } from './image-masks';
 import { parseShadowColor } from './text-shadow';
 import { hasImageOverlay, paintImageEffects, imageEffectDefaults, imageEffectRanges, decorations, type ImageEffects } from './image-effects';
@@ -202,9 +203,10 @@ export function registerImageStrokes(editor: Editor) {
     // Both nodes share the same containing block; do not use the rotated bounding rectangle.
     const properties = { position: 'absolute', display: 'block', pointerEvents: 'none', userSelect: 'none',
       left: `${image.offsetLeft - pad}px`, top: `${image.offsetTop - pad}px`, width: `${image.offsetWidth + 2 * pad}px`, height: `${image.offsetHeight + 2 * pad}px`,
-      margin: '0', padding: '0', border: '0', fontSize: '0', lineHeight: '0', opacity: s.opacity, rotate: s.rotate, scale: s.scale, transform: s.transform,
+      margin: '0', padding: `${pad}px`, boxSizing: 'border-box', backgroundOrigin: 'border-box', transformBox: 'content-box', border: '0', fontSize: '0', lineHeight: '0', opacity: image.style.opacity || '1', rotate: s.rotate, scale: s.scale, transform: image.hasAttribute('data-image-animation') ? image.style.transform || 'none' : s.transform,
       transformOrigin: '50% 50%', zIndex: s.zIndex === 'auto' ? 'auto' : s.zIndex };
     for (const [key, value] of Object.entries(properties)) if (layer.style[key as 'left'] !== value) (layer.style as unknown as Record<string, string>)[key] = value;
+    syncImageAnimation(image, layer);
     layer.removeAttribute('data-mce-style');
     if (layer.previousSibling !== image) image.after(layer);
   }

@@ -136,7 +136,7 @@ test('迁移后的图片编辑、裁剪、对齐和图层设置共享草稿并�
   await c.getByRole('button', { name: '应用裁剪', exact: true }).click();
   await expect(d.getByRole('spinbutton', { name: '图片宽度', exact: true })).toHaveValue('100');
   await d.getByRole('tab', { name: '排版', exact: true }).click();
-  await d.getByRole('button', { name: '右对齐', exact: true }).click();
+  await d.getByRole('button', { name: '贴右侧', exact: true }).click();
   await d.getByRole('button', { name: '置于顶层', exact: true }).click();
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);
   await page.screenshot({ path: 'screenshots/image-settings-layout.png' });
@@ -150,7 +150,7 @@ test('迁移后的图片编辑、裁剪、对齐和图层设置共享草稿并�
   await c.getByRole('button', { name: '1:1', exact: true }).click();
   await c.getByRole('button', { name: '应用裁剪', exact: true }).click();
   await d.getByRole('tab', { name: '排版', exact: true }).click();
-  await d.getByRole('button', { name: '右对齐', exact: true }).click();
+  await d.getByRole('button', { name: '贴右侧', exact: true }).click();
   await d.getByRole('button', { name: '置于顶层', exact: true }).click();
   await d.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(image).toHaveAttribute('alt', '应用的描述');
@@ -175,7 +175,7 @@ test('锁定图片禁用尺寸、裁剪、对齐与图层，尺寸输入校验�
   await expect(d.getByRole('button', { name: '裁剪图片', exact: true })).toBeDisabled();
   await expect(d.getByRole('spinbutton', { name: '图片宽度', exact: true })).toBeDisabled();
   await d.getByRole('tab', { name: '排版', exact: true }).click();
-  for (const name of ['左对齐','居中对齐','右对齐','上一层','下一层','置于顶层','置于底层']) await expect(d.getByRole('button', { name, exact: true })).toBeDisabled();
+  for (const name of ['贴左侧','水平居中','贴右侧','垂直居中','贴顶部','贴底部','画布中心','上一层','下一层','置于顶层','置于底层']) await expect(d.getByRole('button', { name, exact: true })).toBeDisabled();
   await d.getByRole('button', { name: '应用设置', exact: true }).click();
   await expect(page.frameLocator('.tox-edit-area iframe').locator('#photo')).toHaveAttribute('data-image-locked', 'true');
 });

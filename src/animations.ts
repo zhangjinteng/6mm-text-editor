@@ -40,13 +40,14 @@ ${Object.entries(textAnimations).map(([name, css]) =>
 
 export interface TextAnimation { name: AnimationName | ''; duration: number; loop: boolean; total: number }
 export const defaultAnimation: TextAnimation = { name: '', duration: 1, loop: false, total: 0 };
-export function readAnimation(box: HTMLElement): TextAnimation {
-  const node = box.matches('[data-text-animation]') ? box : box.querySelector<HTMLElement>('[data-text-animation]');
-  if (!node || !Object.hasOwn(textAnimations, node.dataset.textAnimation ?? '')) return { ...defaultAnimation };
+export function readAnimation(box: HTMLElement, kind: 'textAnimation' | 'imageAnimation' = 'textAnimation'): TextAnimation {
+  const selector = kind === 'textAnimation' ? '[data-text-animation]' : '[data-image-animation]';
+  const node = box.matches(selector) ? box : box.querySelector<HTMLElement>(selector);
+  if (!node || !Object.hasOwn(textAnimations, node.dataset[kind] ?? '')) return { ...defaultAnimation };
   const duration = parseFloat(node.dataset.animationDuration || node.style.animationDuration || '1');
   const iterations = node.style.animationIterationCount;
   const total = Number(node.dataset.animationTotal ?? (iterations && iterations !== 'infinite' ? Number(iterations) * duration : 0));
-  return { name: node.dataset.textAnimation as AnimationName, duration, loop: node.dataset.animationLoop === 'true' || (!node.dataset.animationLoop && (iterations === 'infinite' || Number(iterations) > 1)), total };
+  return { name: node.dataset[kind] as AnimationName, duration, loop: node.dataset.animationLoop === 'true' || (!node.dataset.animationLoop && (iterations === 'infinite' || Number(iterations) > 1)), total };
 }
 export function validateAnimation(value: TextAnimation): string {
   if (value.name && !Object.hasOwn(textAnimations, value.name)) return '请选择有效的动画效果。';
@@ -54,15 +55,15 @@ export function validateAnimation(value: TextAnimation): string {
   if (!Number.isFinite(value.total) || value.total < 0 || value.total > 3600) return '循环总时长请输入 0—3600 秒。';
   return '';
 }
-export function writeAnimation(box: HTMLElement, value: TextAnimation) {
+export function writeAnimation(box: HTMLElement, value: TextAnimation, kind: 'textAnimation' | 'imageAnimation' = 'textAnimation') {
   // Replace legacy inline animations without touching their rich text formatting.
-  for (const node of [box, ...box.querySelectorAll<HTMLElement>('[data-text-animation]')]) {
-    for (const key of ['textAnimation', 'animationDuration', 'animationLoop', 'animationTotal']) delete node.dataset[key];
+  for (const node of [box, ...box.querySelectorAll<HTMLElement>(kind === 'textAnimation' ? '[data-text-animation]' : '[data-image-animation]')]) {
+    for (const key of [kind, 'animationDuration', 'animationLoop', 'animationTotal']) delete node.dataset[key];
     for (const key of ['animation', 'animation-name', 'animation-duration', 'animation-iteration-count', 'animation-fill-mode']) node.style.removeProperty(key);
     node.removeAttribute('data-mce-style');
   }
   if (!value.name) return;
-  Object.assign(box.dataset, { textAnimation: value.name, animationDuration: `${value.duration}s`, animationLoop: String(value.loop), animationTotal: String(value.total) });
+  Object.assign(box.dataset, { [kind]: value.name, animationDuration: `${value.duration}s`, animationLoop: String(value.loop), animationTotal: String(value.total) });
   box.style.animationDuration = `${value.duration}s`;
   box.style.animationIterationCount = value.loop ? (value.total > 0 ? String(value.total / value.duration) : 'infinite') : '1';
 }

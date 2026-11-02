@@ -63,7 +63,7 @@ test('导入 HTML 并保留源码模式刷新前的修改', async ({ page }) => 
 });
 
 test('本地源码、表格和表情对话框正常，无商业插件按钮', async ({ page }) => {
-  await page.locator('[data-mce-name="code"]').click();
+  await page.locator('.tox-toolbar-overlord [data-mce-name="code"]').click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   const emojiArea = (await page.locator('.tox-edit-area iframe').boundingBox())!;
@@ -73,7 +73,7 @@ test('本地源码、表格和表情对话框正常，无商业插件按钮', as
   await expect(page.getByRole('dialog').filter({ has: page.getByRole('textbox', { name: '搜索', exact: true }) })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
-  await page.locator('[data-mce-name="table"]').click();
+  await page.locator('.tox-toolbar-overlord [data-mce-name="table"]').click();
   await expect(page.locator('.tox-menu').first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-mce-name="math"], [data-mce-name="exportword"], [data-mce-name="tinycomments"]')).toHaveCount(0);

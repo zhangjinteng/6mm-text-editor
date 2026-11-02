@@ -1,5 +1,6 @@
 import type { Editor } from 'tinymce';
 import { imageGeometry } from '../image-geometry';
+import { imageLayoutRect } from '../image-animation';
 
 /**
  * 编辑器内拖动弹幕和图片；文字由文本框交互控制器处理。
@@ -33,7 +34,7 @@ export function enableDanmakuDragging(editor: Editor): () => void {
     const element = target?.closest<HTMLElement>(selector);
     if (!element || !editor.getBody().contains(element) || element.parentElement?.closest('div[data-danmaku-source]')) return;
     if (element.getAttribute('data-image-locked') === 'true') return;
-    const rect = element.getBoundingClientRect();
+    const rect = element.tagName === 'IMG' ? imageLayoutRect(element) : element.getBoundingClientRect();
     drag = { element, capture: element, pointer: event.pointerId, x: event.clientX, y: event.clientY, left: rect.left, top: rect.top, width: element.tagName === 'IMG' ? imageGeometry(element).width : rect.width,
       dx: 0, dy: 0, moved: false };
     drag.capture.setPointerCapture(event.pointerId);
@@ -68,7 +69,7 @@ export function enableDanmakuDragging(editor: Editor): () => void {
       const fixedWidth = element.style.width;
       editor.dom.setStyles(element, { position: 'absolute', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0' });
       if (element.tagName === 'IMG' || !fixedWidth || fixedWidth === 'auto') editor.dom.setStyle(element, 'width', `${current.width}px`);
-      const origin = element.getBoundingClientRect();
+      const origin = element.tagName === 'IMG' ? imageLayoutRect(element) : element.getBoundingClientRect();
       const left = current.left + current.dx - origin.left;
       const top = current.top + current.dy - origin.top;
       editor.dom.setStyles(element, { left: `${left}px`, top: `${top}px` });

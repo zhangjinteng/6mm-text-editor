@@ -1,0 +1,4 @@
+.layer-position-controls{margin:0 0 20px}.layer-position-controls h3{font-size:13px;font-weight:600;margin:0 0 12px}
+.layer-position-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.layer-position-actions button{min-width:0;padding:10px 3px;border:1px solid #cbded4;border-radius:6px;background:#f3f8f5;color:#39715a;font:inherit;font-size:12px;cursor:pointer}
+.layer-position-actions button:hover:not(:disabled){background:#e8f3ed;border-color:#147d64}.layer-position-actions button:focus-visible{outline:2px solid #147d64;outline-offset:2px}.layer-position-actions button:disabled{opacity:.4;cursor:default}

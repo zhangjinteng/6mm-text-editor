@@ -23,7 +23,7 @@ test('工具栏收纳设置，草稿不改原对象；取消、关闭与 Esc 均
   const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
   for (const exit of ['取消', '关闭弹幕设置', 'Escape']) {
     const d = await open(page);
-    await d.getByRole('button', { name: '居中对齐', exact: true }).click();
+    await d.getByRole('button', { name: '水平居中', exact: true }).click();
     await d.getByRole('button', { name: '上一层', exact: true }).click();
     await expect(d.getByRole('button', { name: '置于顶层', exact: true })).toBeDisabled();
     await d.getByRole('button', { name: '下一层', exact: true }).click();
@@ -41,7 +41,7 @@ test('对齐与图层一次应用和撤销，保存刷新回显，窄屏可用',
   const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
   const original = (await region(page).boundingBox())!;
   let d = await open(page);
-  await d.getByRole('button', { name: '居中对齐', exact: true }).click();
+  await d.getByRole('button', { name: '水平居中', exact: true }).click();
   await d.getByRole('button', { name: '置于顶层', exact: true }).click();
   await page.screenshot({ path: 'screenshots/danmaku-settings-desktop.png' });
   await d.getByRole('button', { name: '应用设置', exact: true }).click();
@@ -57,7 +57,7 @@ test('对齐与图层一次应用和撤销，保存刷新回显，窄屏可用',
   await page.reload(); await page.waitForFunction(() => window.tinymce?.activeEditor?.initialized);
   d = await open(page);
   await expect(page.getByRole('complementary', { name: '文字配置面板' })).toBeHidden();
-  await expect(d.getByRole('button', { name: '居中对齐', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(d.getByRole('button', { name: '水平居中', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(d.getByRole('button', { name: '置于顶层', exact: true })).toBeDisabled();
   await page.setViewportSize({ width: 390, height: 844 });
   const box = (await d.boundingBox())!;
@@ -69,7 +69,7 @@ test('对齐与图层一次应用和撤销，保存刷新回显，窄屏可用',
 test('替换文档或进入只读会关闭设置，不误改新内容', async ({ page }) => {
   const before = await page.evaluate(() => window.tinymce.activeEditor.getContent());
   const d = await open(page);
-  await d.getByRole('button', { name: '右对齐', exact: true }).click();
+  await d.getByRole('button', { name: '贴右侧', exact: true }).click();
   await page.evaluate(() => window.tinymce.activeEditor.mode.set('readonly'));
   await expect(d).toHaveCount(0);
   expect(await page.evaluate(() => window.tinymce.activeEditor.getContent())).toBe(before);

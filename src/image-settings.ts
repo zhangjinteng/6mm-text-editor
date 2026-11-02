@@ -1,4 +1,8 @@
+import { layerPositionControls, positionLayer, type LayerPosition } from './layer-position';
 import type { Editor } from 'tinymce';
+import { createAnimationEditor } from './animation-picker';
+import { defaultAnimation, validateAnimation } from './animations';
+import { imageAnimationStyles, readImageAnimation, writeImageAnimation, syncImageAnimation } from './image-animation';
 import './image-settings.css';
 import { imageEffectDefaults, imageEffectRanges, imageEffectPresets, effectPresetPatch, effectCategories, decorations, hasImageOverlay, type EffectCategory } from './image-effects';
 import { installColorPickers } from './text-color-picker';
@@ -68,7 +72,7 @@ function styles(settings: Settings): Record<string, string> {
   const preset = settings.filterStrength > 0 ? filters[settings.preset].value(settings.filterStrength / 100) : '';
   return {
     outline: 'none', 'outline-offset': '0px',
-    opacity: String(settings.opacity / 100), 'border-radius': `${settings.radius}px`,
+    opacity: String(settings.opacity / 100), '--image-animation-opacity': String(settings.opacity / 100), 'border-radius': `${settings.radius}px`,
     // 独立 scale 不覆盖拖动预览使用的 transform。
     scale: `${settings.flipX ? -1 : 1} ${settings.flipY ? -1 : 1}`,
     rotate: `${settings.rotation}deg`, 'transform-origin': '50% 50%',
@@ -101,13 +105,14 @@ export function registerImageSettings(editor: Editor): void {
       const field = (key: NumericKey, label: string, unit: string) => `<label class="image-setting-range"><span>${label}<output data-output="${key}"></output></span><input type="range" name="${key}" aria-label="${label}" min="${ranges[key][0]}" max="${ranges[key][1]}" data-unit="${unit}"></label>`;
       dialog.innerHTML = `<header><div><h2>图片设置</h2><p>预览调整效果，应用后保存到图片</p></div><button type="button" data-close aria-label="关闭图片设置">×</button></header>
         <div class="image-settings-body"><div class="image-settings-preview"><img alt="图片效果预览"><span>效果预览</span></div><div class="image-settings-controls">
-        <div role="tablist" aria-label="图片设置分类"><button type="button" role="tab" id="image-tab-source" aria-controls="image-panel-source" aria-selected="true" data-tab="source">图片</button><button type="button" role="tab" id="image-tab-appearance" aria-controls="image-panel-appearance" aria-selected="false" data-tab="appearance" tabindex="-1">外观</button><button type="button" role="tab" id="image-tab-effects" aria-controls="image-panel-effects" aria-selected="false" data-tab="effects" tabindex="-1">特效</button><button type="button" role="tab" id="image-tab-shadow" aria-controls="image-panel-shadow" aria-selected="false" data-tab="shadow" tabindex="-1">阴影</button><button type="button" role="tab" id="image-tab-mask" aria-controls="image-panel-mask" aria-selected="false" data-tab="mask" tabindex="-1">蒙版</button><button type="button" role="tab" id="image-tab-filter" aria-controls="image-panel-filter" aria-selected="false" data-tab="filter" tabindex="-1">滤镜</button><button type="button" role="tab" id="image-tab-stroke" aria-controls="image-panel-stroke" aria-selected="false" data-tab="stroke" tabindex="-1">描边</button><button type="button" role="tab" id="image-tab-layout" aria-controls="image-panel-layout" aria-selected="false" data-tab="layout" tabindex="-1">排版</button></div>
+        <div role="tablist" aria-label="图片设置分类"><button type="button" role="tab" id="image-tab-source" aria-controls="image-panel-source" aria-selected="true" data-tab="source">图片</button><button type="button" role="tab" id="image-tab-appearance" aria-controls="image-panel-appearance" aria-selected="false" data-tab="appearance" tabindex="-1">外观</button><button type="button" role="tab" id="image-tab-effects" aria-controls="image-panel-effects" aria-selected="false" data-tab="effects" tabindex="-1">特效</button><button type="button" role="tab" id="image-tab-shadow" aria-controls="image-panel-shadow" aria-selected="false" data-tab="shadow" tabindex="-1">阴影</button><button type="button" role="tab" id="image-tab-mask" aria-controls="image-panel-mask" aria-selected="false" data-tab="mask" tabindex="-1">蒙版</button><button type="button" role="tab" id="image-tab-filter" aria-controls="image-panel-filter" aria-selected="false" data-tab="filter" tabindex="-1">滤镜</button><button type="button" role="tab" id="image-tab-stroke" aria-controls="image-panel-stroke" aria-selected="false" data-tab="stroke" tabindex="-1">描边</button><button type="button" role="tab" id="image-tab-layout" aria-controls="image-panel-layout" aria-selected="false" data-tab="layout" tabindex="-1">排版</button><button type="button" role="tab" id="image-tab-animation" aria-controls="image-panel-animation" aria-selected="false" data-tab="animation" tabindex="-1">动画</button></div>
         <section role="tabpanel" id="image-panel-source" aria-labelledby="image-tab-source" data-section="source"><h3 class="image-settings-section-title">插入 / 编辑图片</h3><label class="image-settings-url">图片地址<input name="source" type="text" aria-label="图片地址"></label><input type="file" data-image-file aria-label="图片文件" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden><button type="button" data-upload class="image-settings-upload">选择本地图片</button><p class="image-settings-hint">支持 PNG、JPG、WebP、GIF、SVG，最大 5 MB。替换保留位置和尺寸，重置旧裁剪。</p><label class="image-settings-url">图片描述<input name="alt" type="text" aria-label="图片描述"></label><label class="image-settings-url">图片标题<input name="title" type="text" aria-label="图片标题"></label>
         <div class="image-settings-dimensions"><label>宽度（px）<input name="width" type="number" min="1" max="20000" aria-label="图片宽度"></label><label>高度（px）<input name="height" type="number" min="1" max="20000" aria-label="图片高度"></label></div>
         <label class="image-settings-ratio"><input name="keepRatio" type="checkbox" checked>保持宽高比</label><button type="button" data-crop class="image-settings-upload">裁剪图片</button>
         <div class="image-settings-checks"><label><input name="flipX" type="checkbox">水平翻转</label><label><input name="flipY" type="checkbox">垂直翻转</label><label><input name="locked" type="checkbox">锁定位置与尺寸</label></div><p class="image-settings-hint">锁定后仍可选中图片并在这里解锁。</p>${field('rotation', '旋转角度', '°')}<div class="image-settings-rotation"><button type="button" data-turn="-90">↶ 左转 90°</button><button type="button" data-turn="90">↷ 右转 90°</button></div></section>
+        <section role="tabpanel" id="image-panel-animation" aria-labelledby="image-tab-animation" data-section="animation" hidden><div data-animation-editor></div></section>
         <section role="tabpanel" id="image-panel-layout" aria-labelledby="image-tab-layout" data-section="layout" hidden>
-        <h3 class="image-settings-section-title">图片对齐</h3><div class="image-settings-align" role="group" aria-label="图片对齐">${[['left', '左对齐'], ['center', '居中对齐'], ['right', '右对齐']].map(([value, label]) => `<button type="button" data-align="${value}" aria-pressed="false">${label}</button>`).join('')}</div>
+        ${layerPositionControls()}
         <h3 class="image-settings-section-title">图层设置 <span data-layer-position></span></h3><div class="image-settings-layers" role="group" aria-label="图层设置">${[['forward', '上一层'], ['backward', '下一层'], ['top', '置于顶层'], ['bottom', '置于底层']].map(([value, label]) => `<button type="button" data-layer="${value}">${label}</button>`).join('')}</div>
         <p class="image-settings-hint">调整与文字、图片和弹幕的遮挡顺序，点击“应用设置”后生效。</p></section>
         <section role="tabpanel" id="image-panel-appearance" aria-labelledby="image-tab-appearance" data-section="appearance" hidden>${field('opacity', '不透明度', '%')}${field('radius', '圆角', 'px')}${field('brightness', '亮度', '%')}${field('contrast', '对比度', '%')}${field('saturation', '饱和度', '%')}${field('hue', '色相', '°')}</section>
@@ -131,6 +136,7 @@ export function registerImageSettings(editor: Editor): void {
         <section role="tabpanel" id="image-panel-filter" aria-labelledby="image-tab-filter" data-section="filter" hidden><div class="image-settings-filters">${Object.entries(filters).map(([key, filter]) => `<button type="button" data-filter="${key}" aria-label="${filter.label}" aria-pressed="false"><i style="filter:${filter.value(1)}"></i><span>${filter.label}</span></button>`).join('')}</div>${field('filterStrength', '滤镜强度', '%')}<p class="image-settings-hint">滤镜与外观中的基础调色叠加，选择原图可移除滤镜。</p></section>
         <section role="tabpanel" id="image-panel-stroke" aria-labelledby="image-tab-stroke" data-section="stroke" hidden><label><input name="stroke" type="checkbox">启用描边</label><label class="image-settings-color"><span>描边颜色</span><span class="image-settings-color-controls"><input data-image-color="strokeColor" type="color" aria-label="选择描边颜色"><input name="strokeColor" type="text" aria-label="描边颜色" spellcheck="false"></span></label>${field('strokeWidth', '描边粗细', 'px')}<label><input name="strokeDouble" type="checkbox">启用双层描边</label><label class="image-settings-color"><span>外层颜色</span><span class="image-settings-color-controls"><input type="color" aria-label="选择外层颜色"><input name="strokeOuterColor" type="text" aria-label="外层颜色" spellcheck="false"></span></label>${field('strokeOuterWidth', '外层粗细', 'px')}<label class="image-settings-stroke-style">描边位置<select name="strokePosition" aria-label="描边位置">${Object.entries(strokePositions).map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><label class="image-settings-stroke-style">描边预设<select name="strokeStyle" aria-label="描边预设">${Object.entries(borderStyles).map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label><p class="image-settings-hint">描边沿裁剪、圆角和蒙版处理后的最终轮廓生成，外描边可延伸至图片外。渐隐、柔边以 50% 透明度轮廓为边界。</p></section>
         </div></div><p class="image-settings-error" role="alert" hidden></p><footer><button type="button" data-reset>重置效果</button><div><button type="button" data-close>取消</button><button type="button" data-apply>应用设置</button></div></footer>`;
+      const animationStyle = doc.createElement('style'); animationStyle.textContent = imageAnimationStyles; dialog.append(animationStyle);
       if (panel) {
         dialog.querySelector('header h2')!.textContent = '图片配置';
         dialog.querySelector('header p')!.textContent = '调整即时生效，可撤销';
@@ -161,10 +167,12 @@ export function registerImageSettings(editor: Editor): void {
       let originalGeometry = imageGeometry(image), originalCrop = readCrop(image);
       let crop: Crop = { ...originalCrop }, width = originalGeometry.width, height = originalGeometry.height;
       let dimensionRatio = width / height;
-      let alignment = '', layerPosition = readObjectLayers(editor.getBody()).indexOf(outerLayerObject(image)) + 1;
-      let originalLayerPosition = layerPosition, appliedAlignment = alignment;
+      let animation = readImageAnimation(image);
+      const positions: LayerPosition[] = [];
+      let layerPosition = readObjectLayers(editor.getBody()).indexOf(outerLayerObject(image)) + 1;
+      let originalLayerPosition = layerPosition, appliedPositions = positions.length;
       let alt = image.getAttribute('alt') ?? '', title = image.getAttribute('title') ?? '';
-      const snapshot = () => JSON.stringify({ source, settings, crop, width, height, alignment, layerPosition, alt, title });
+      const snapshot = () => JSON.stringify({ source, settings, animation, crop, width, height, positions, layerPosition, alt, title });
       const validSize = () => [width, height].every(value => Number.isFinite(value) && value >= 1 && value <= 20000);
       let maskCategory: MaskCategory = masks[settings.mask]?.category ?? 'basic';
       let maskLoading = false, maskVersion = 0;
@@ -211,7 +219,7 @@ export function registerImageSettings(editor: Editor): void {
         input('alt').value = alt; input('title').value = title;
         for (const name of ['width', 'height']) input(name).disabled = settings.locked;
         dialog.querySelector<HTMLButtonElement>('[data-crop]')!.disabled = settings.locked;
-        dialog.querySelectorAll<HTMLButtonElement>('[data-align]').forEach(button => { button.disabled = settings.locked; button.setAttribute('aria-pressed', String(button.dataset.align === alignment)); });
+        dialog.querySelectorAll<HTMLButtonElement>('[data-position]').forEach(button => { button.disabled = settings.locked; });
         const layerCount = readObjectLayers(editor.getBody()).length;
         dialog.querySelector('[data-layer-position]')!.textContent = `第 ${layerPosition} / ${layerCount} 层`;
         dialog.querySelectorAll<HTMLButtonElement>('[data-layer]').forEach(button => { button.disabled = settings.locked || (['top', 'forward'].includes(button.dataset.layer!) ? layerPosition >= layerCount : layerPosition <= 1); });
@@ -254,6 +262,10 @@ export function registerImageSettings(editor: Editor): void {
         // 原图和描边独立绘制，外描边不会被原图的 CSS 蒙版裁掉。
         for (const [name, value] of Object.entries(styles(settings))) preview.style.setProperty(name, value);
         preview.style.setProperty('object-view-box', cropViewBox(crop));
+        if (!validateAnimation(animation)) {
+          if (JSON.stringify(readImageAnimation(preview)) !== JSON.stringify(animation)) writeImageAnimation(preview, animation);
+          syncImageAnimation(preview, strokePreview);
+        }
         const revision = ++previewVersion;
         strokePreview.hidden = !hasImageOverlay(settings);
         if (hasImageOverlay(settings)) {
@@ -264,12 +276,18 @@ export function registerImageSettings(editor: Editor): void {
               backgroundImage: `url("${result.url}")`, backgroundSize: '100% 100%',
               width: `${parseFloat(preview.style.width) + result.pad * ratioX * 2}px`, height: `${parseFloat(preview.style.height) + result.pad * ratioY * 2}px`,
               left: `${preview.offsetLeft - result.pad * ratioX}px`, top: `${preview.offsetTop - result.pad * ratioY}px`,
-              rotate: preview.style.rotate, scale: preview.style.scale, opacity: preview.style.opacity
+              rotate: preview.style.rotate, scale: preview.style.scale, opacity: preview.style.opacity,
+              boxSizing: 'border-box', padding: `${result.pad * ratioY}px ${result.pad * ratioX}px`, backgroundOrigin: 'border-box', transformBox: 'content-box'
             });
+            syncImageAnimation(preview, strokePreview);
           }).catch(reason => { if (!closed && revision === previewVersion) { strokePreview.hidden = true; message(reason.message); } });
         }
 
       };
+      const animationEditor = createAnimationEditor(doc, animation, value => {
+        animation = value; message(validateAnimation(animation)); refresh();
+      });
+      dialog.querySelector('[data-animation-editor]')!.append(animationEditor.element);
       const changeSource = (value: string) => {
         if (value.trim() !== source) crop = value.trim() === originalSource ? { ...originalCrop } : { x: 0, y: 0, width: 1, height: 1 };
         source = value.trim(); input('source').value = source;
@@ -380,7 +398,7 @@ export function registerImageSettings(editor: Editor): void {
       dialog.querySelectorAll<HTMLElement>('[data-filter]').forEach(button => button.addEventListener('click', () => {
         settings.preset = button.dataset.filter as Filter; refresh();
       }));
-      dialog.querySelectorAll<HTMLButtonElement>('[data-align]').forEach(button => button.addEventListener('click', () => { alignment = button.dataset.align!; refresh(); }));
+      dialog.querySelectorAll<HTMLButtonElement>('[data-position]').forEach(button => button.addEventListener('click', () => { positions.push(button.dataset.position as LayerPosition); refresh(); }));
       dialog.querySelectorAll<HTMLButtonElement>('[data-layer]').forEach(button => button.addEventListener('click', () => {
         const count = readObjectLayers(editor.getBody()).length, action = button.dataset.layer;
         layerPosition = action === 'top' ? count : action === 'bottom' ? 1 : Math.max(1, Math.min(count, layerPosition + (action === 'forward' ? 1 : -1))); refresh();
@@ -405,10 +423,11 @@ export function registerImageSettings(editor: Editor): void {
         reader.onerror = () => { busy = false; applyButton.disabled = false; if (!closed) message('图片文件读取失败，请重新选择。'); };
         reader.readAsDataURL(file);
       });
-      dialog.querySelector('[data-reset]')!.addEventListener('click', () => { settings = { ...defaults, locked: settings.locked }; refresh(); });
+      dialog.querySelector('[data-reset]')!.addEventListener('click', () => { settings = { ...defaults, locked: settings.locked }; animation = { ...defaultAnimation }; animationEditor.reset(animation); refresh(); });
       const commit = async () => {
         if (closed || committing || busy || maskLoading || editor.mode.isReadOnly() || !image.isConnected) return;
         if (['shadowColor', 'strokeColor', 'glowColor', 'decorationColor', 'strokeOuterColor'].some(name => !parseShadowColor(input(name).value, doc))) { message('请输入有效的颜色。'); return; }
+        const animationError = validateAnimation(animation); if (animationError) { message(animationError); return; }
         if (!validSize()) { message('请输入 1—20000 px 范围内的图片宽度和高度。'); return; }
         if (input('source').value.trim() !== source) changeSource(input('source').value);
         const submitted = snapshot();
@@ -445,14 +464,14 @@ export function registerImageSettings(editor: Editor): void {
           }
           editor.dom.setAttrib(image, 'alt', alt); editor.dom.setAttrib(image, 'title', title || null);
           editor.dom.setStyles(image, styles(settings));
-          if (alignment && alignment !== appliedAlignment && !settings.locked) {
+          if (!settings.locked) {
             editor.dom.setAttrib(image, 'data-image-locked', null);
-            editor.selection.select(image);
-            editor.execCommand({ left: 'JustifyLeft', center: 'JustifyCenter', right: 'JustifyRight' }[alignment]!);
+            for (const position of positions.slice(appliedPositions)) positionLayer(editor, image, position);
           }
           if (!settings.locked && layerPosition !== originalLayerPosition) setObjectLayerPosition(editor, image, layerPosition);
           editor.dom.setAttrib(image, 'data-image-settings', JSON.stringify(settings));
           editor.dom.setAttrib(image, 'data-image-locked', settings.locked ? 'true' : null);
+          if (JSON.stringify(readImageAnimation(image)) !== JSON.stringify(animation)) writeImageAnimation(image, animation);
           if (strokeResult) strokes.write(image, strokeResult);
           else {
             const id = image.getAttribute('data-image-stroke-id');
@@ -461,7 +480,7 @@ export function registerImageSettings(editor: Editor): void {
           }
         });
         committed = snapshot();
-        originalSource = source; originalGeometry = imageGeometry(image); originalCrop = { ...crop }; originalLayerPosition = layerPosition; appliedAlignment = alignment;
+        originalSource = source; originalGeometry = imageGeometry(image); originalCrop = { ...crop }; originalLayerPosition = layerPosition; appliedPositions = positions.length;
         if (!panel) close();
         editor.dispatch('change'); editor.dispatch('ScrollContent'); editor.dispatch('ResizeContent');
       };

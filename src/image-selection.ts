@@ -1,8 +1,13 @@
 import type { Editor } from 'tinymce';
 
-/** Keep TinyMCE's image selection without Chromium's native gray image highlight. */
+/** Keep image selection semantics while the shared object frame supplies its visuals. */
 export function enableImageSelection(editor: Editor): () => void {
   const doc = editor.getDoc();
+  // TinyMCE can restore data-mce-selected after pointerdown. Suppress its extra
+  // outline without removing the selection state used by image commands.
+  const style = doc.createElement('style');
+  style.textContent = '.mce-content-body img[data-mce-selected]:not([data-mce-object]):not([data-mce-placeholder]) { outline: none; }';
+  doc.head.append(style);
   function hideHighlight() {
     const selection = doc.getSelection();
     if (!selection?.rangeCount) return;
@@ -25,6 +30,7 @@ export function enableImageSelection(editor: Editor): () => void {
   editor.on('AfterSetSelectionRange', hideHighlight);
   doc.addEventListener('selectionchange', hideHighlight);
   return () => {
+    style.remove();
     editor.off('GetSelectionRange', logicalRange);
     editor.off('AfterSetSelectionRange', hideHighlight);
     doc.removeEventListener('selectionchange', hideHighlight);

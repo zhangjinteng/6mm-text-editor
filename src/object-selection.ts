@@ -1,7 +1,9 @@
 import type { Editor } from 'tinymce';
 import { contentBounds } from './object-layout';
 import { imageGeometry, rotatePoint } from './image-geometry';
+import { imageLayoutRect } from './image-animation';
 import { enableImageSelection } from './image-selection';
+import { cornerResizeScale } from './resize-geometry';
 
 /** 图片与弹幕共用的选中框；辅助层不进入文档，缩放只提交一个撤销步骤。 */
 export function enableObjectSelection(editor: Editor): () => void {
@@ -46,7 +48,7 @@ export function enableObjectSelection(editor: Editor): () => void {
     const handle = target?.closest<HTMLElement>('[data-corner]');
     if (handle && overlay.contains(handle) && selected?.isConnected) {
       if (selected.getAttribute('data-image-locked') === 'true') return;
-      const box = selected.getBoundingClientRect();
+      const box = selected.tagName === 'IMG' ? imageLayoutRect(selected) : selected.getBoundingClientRect();
       const geometry = selected.tagName === 'IMG' ? imageGeometry(selected) : { width: box.width, height: box.height, angle: 0 };
       resize = { element: selected, handle, pointer: event.pointerId, x: event.clientX, y: event.clientY, left: box.left, top: box.top, width: geometry.width, height: geometry.height, angle: geometry.angle, corner: handle.dataset.corner!, dx: 0, dy: 0, moved: false };
       handle.setPointerCapture(event.pointerId);
@@ -75,8 +77,8 @@ export function enableObjectSelection(editor: Editor): () => void {
     let width = Math.max(32, current.width + (west ? -local.x : local.x));
     let height = Math.max(32, current.height + (north ? -local.y : local.y));
     if (current.element.tagName === 'IMG') {
-      const scale = Math.max(32 / current.width, 32 / current.height,
-        Math.abs(local.x) >= Math.abs(local.y) ? width / current.width : height / current.height);
+      const scale = cornerResizeScale(current.width, current.height, local.x, local.y, current.corner,
+        Math.max(32 / current.width, 32 / current.height));
       width = current.width * scale; height = current.height * scale;
     }
     const dw = width - current.width, dh = height - current.height;
@@ -114,7 +116,7 @@ export function enableObjectSelection(editor: Editor): () => void {
     const element = current.element;
     editor.undoManager.transact(() => {
       editor.dom.setStyles(element, { position: 'absolute', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', boxSizing: 'border-box', width: `${size.width}px`, height: `${size.height}px` });
-      const origin = element.getBoundingClientRect();
+      const origin = element.tagName === 'IMG' ? imageLayoutRect(element) : element.getBoundingClientRect();
       const left = current.left + size.x - origin.left; const top = current.top + size.y - origin.top;
       editor.dom.setStyles(element, { left: `${left}px`, top: `${top}px` });
       if (element.matches('div[data-danmaku-source]')) {
@@ -136,7 +138,7 @@ export function enableObjectSelection(editor: Editor): () => void {
     const danmaku = element.matches('div[data-danmaku-source]');
     if (!danmaku && editor.getWin().getComputedStyle(element).position !== 'absolute') return;
     event.preventDefault();
-    const before = element.getBoundingClientRect();
+    const before = image ? imageLayoutRect(element) : element.getBoundingClientRect();
     const bounds = contentBounds(editor, element);
     const targetLeft = bounds.left + Math.max(0, bounds.width - before.width) * ratio;
     const format = ratio === 0 ? 'alignleft' : ratio === 1 ? 'alignright' : 'aligncenter';
@@ -148,7 +150,7 @@ export function enableObjectSelection(editor: Editor): () => void {
         editor.dom.setStyles(element, { position: 'absolute', width: `${before.width}px`, height: `${before.height}px`, boxSizing: 'border-box', margin: '0' });
       }
       editor.dom.setStyles(element, { left: '0px', top: '0px', right: 'auto', bottom: 'auto' });
-      const origin = element.getBoundingClientRect();
+      const origin = image ? imageLayoutRect(element) : element.getBoundingClientRect();
       const left = targetLeft - origin.left; const top = before.top - origin.top;
       editor.dom.setStyles(element, { left: `${left}px`, top: `${top}px` });
       if (danmaku) editor.dom.setAttribs(element, { 'data-danmaku-x': String(left), 'data-danmaku-y': String(top) });

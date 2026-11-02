@@ -1,3 +1,4 @@
+import { layerPositionControls, positionLayer, type LayerPosition } from './layer-position';
 import type { Editor } from 'tinymce';
 import { defaultFontFamily, installFonts } from './fonts';
 import { defaultDeform, readDeform, writeDeform, validateDeform } from './text-deform';
@@ -20,7 +21,7 @@ import { readBackground, writeBackground, validateBackground, type TextBackgroun
 import { createBackgroundEditor } from './text-background-editor';
 
 const defaults = {
-  ...defaultTextStyle, clearFormatting: false, textLocked: false, layerPosition: 1,
+  positions: [] as LayerPosition[], ...defaultTextStyle, clearFormatting: false, textLocked: false, layerPosition: 1,
   fontFamily: 'sans-serif', fontSize: '24', textColor: '#000000', highlightColor: 'transparent',
   paragraphFormat: 'p', textDirection: 'ltr', paragraphQuote: false,
   opacity: '100', background: null as TextBackground | null,
@@ -36,7 +37,7 @@ const pixels = (value: string, fallback = 0) => Number.isFinite(parseFloat(value
 function read(box: HTMLElement): Settings {
   const s = box.style, d = box.dataset;
   return {
-    ...readTextStyle(box), clearFormatting: false, textLocked: isTextLocked(box),
+    positions: [], ...readTextStyle(box), clearFormatting: false, textLocked: isTextLocked(box),
     layerPosition: readObjectLayers(box.ownerDocument.body).indexOf(outerLayerObject(box)) + 1,
     ...readBasicTextSettings(box), ...readParagraphSettings(box),
     opacity: String(Math.round(pixels(s.opacity, 1) * 100)), background: readBackground(box),
@@ -142,6 +143,7 @@ export function registerTextSettings(editor: Editor): void {
       <button type="button" class="text-settings-action" data-clear-format>清除格式</button>
       <p class="text-settings-hint">应用到整个文字对象。混合状态表示文字包含不同样式；清除格式后仍可预览或取消。</p></section>
       <section role="tabpanel" data-section="layout" id="text-panel-layout" aria-labelledby="text-tab-layout" hidden>
+      ${layerPositionControls()}
       ${select('textAlign', '文字对齐', [['start', '起始端'], ['end', '末尾端'], ['left', '左对齐'], ['center', '居中'], ['right', '右对齐'], ['justify', '两端对齐']])}
       <label class="text-settings-select">行距倍数<input type="text" inputmode="decimal" name="lineHeight" aria-label="行距倍数" placeholder="0.5—5" list="text-line-heights"></label>
       <datalist id="text-line-heights">${['1', '1.2', '1.5', '1.75', '2', '2.5', '3'].map(value => `<option value="${value}"></option>`).join('')}</datalist>
@@ -269,6 +271,7 @@ export function registerTextSettings(editor: Editor): void {
         const up = ['forward', 'top'].includes(button.dataset.layerAction!);
         button.disabled = locked || draft.textLocked || draft.layerPosition < 1 || (up ? draft.layerPosition >= layerCount : draft.layerPosition <= 1);
       });
+      dialog.querySelectorAll<HTMLButtonElement>('[data-position]').forEach(button => { button.disabled = locked || draft.textLocked; });
       colorPickers?.refresh();
       preview();
     };
@@ -331,7 +334,11 @@ export function registerTextSettings(editor: Editor): void {
       draft.layerPosition = action === 'top' ? count : action === 'bottom' ? 1 : Math.max(1, Math.min(count, draft.layerPosition + (action === 'forward' ? 1 : -1)));
       invalidateCheck(); message(''); refresh();
     }));
-    dialog.querySelector('[data-reset]')!.addEventListener('click', () => { ++applyVersion; busy = false; applyButton.disabled = false; draft = { ...structuredClone(defaults), ...Object.fromEntries(Object.keys(defaultTextStyle).map(key => [key, draft[key as keyof typeof defaultTextStyle]])), clearFormatting: draft.clearFormatting, textLocked: draft.textLocked, layerPosition: draft.layerPosition, fontFamily: draft.fontFamily, fontSize: draft.fontSize, textColor: draft.textColor, highlightColor: draft.highlightColor, paragraphFormat: draft.paragraphFormat, textDirection: draft.textDirection, paragraphQuote: draft.paragraphQuote }; fillEditor.reset(draft.layers); shadowEditor.reset(draft.shadow); backgroundEditor.reset(draft.background); deformEditor.reset(draft.deformation); animationEditor.reset(draft.animation); message(''); refresh(); });
+    dialog.querySelectorAll<HTMLButtonElement>('[data-position]').forEach(button => button.addEventListener('click', () => {
+      if (locked || draft.textLocked || !canChange(box)) return;
+      draft.positions.push(button.dataset.position as LayerPosition); invalidateCheck(); message(''); refresh();
+    }));
+    dialog.querySelector('[data-reset]')!.addEventListener('click', () => { ++applyVersion; busy = false; applyButton.disabled = false; draft = { ...structuredClone(defaults), ...Object.fromEntries(Object.keys(defaultTextStyle).map(key => [key, draft[key as keyof typeof defaultTextStyle]])), clearFormatting: draft.clearFormatting, textLocked: draft.textLocked, layerPosition: draft.layerPosition, positions: draft.positions, fontFamily: draft.fontFamily, fontSize: draft.fontSize, textColor: draft.textColor, highlightColor: draft.highlightColor, paragraphFormat: draft.paragraphFormat, textDirection: draft.textDirection, paragraphQuote: draft.paragraphQuote }; fillEditor.reset(draft.layers); shadowEditor.reset(draft.shadow); backgroundEditor.reset(draft.background); deformEditor.reset(draft.deformation); animationEditor.reset(draft.animation); message(''); refresh(); });
     const commit = async (duplicate = false) => {
       if (closed || busy || !canOpen(box) || isTextLocked(box) !== locked) return;
       const invalid = locked ? '' : validate(draft, doc); if (invalid) { message(invalid); return; }
@@ -351,6 +358,7 @@ export function registerTextSettings(editor: Editor): void {
       if (submitted !== JSON.stringify(initial)) editor.undoManager.transact(() => {
         if (!locked) {
           apply(box, draft, initial, width, paragraphStyles, plain);
+          if (!draft.textLocked) for (const position of draft.positions.slice(initial.positions.length)) positionLayer(editor, box, position);
           if (draft.layerPosition !== initial.layerPosition) setObjectLayerPosition(editor, box, draft.layerPosition);
         }
         editor.dom.setAttrib(box, 'data-text-locked', draft.textLocked ? 'true' : null);

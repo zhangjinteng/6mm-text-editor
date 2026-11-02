@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { editorBuildEnv } from './editor-env.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, '6mm-tinymce');
@@ -34,7 +35,7 @@ async function fingerprint() {
 }
 
 function run(command, args) {
-  const result = spawnSync(command, args, { cwd: source, stdio: 'inherit', env: process.env });
+  const result = spawnSync(command, args, { cwd: source, stdio: 'inherit', env: editorBuildEnv(source) });
   if (result.error) throw new Error(`Unable to run ${command}: ${result.error.message}`);
   if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed (${result.status})`);
 }

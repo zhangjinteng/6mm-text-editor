@@ -1,5 +1,6 @@
 import { advancedTextStyles } from './text-advanced';
 import { animationStyles } from './animations';
+import { imageAnimationStyles } from './image-animation';
 import { defaultFontFamily, installFonts, embedDocumentFonts } from './fonts';
 
 export interface Revision {
@@ -65,6 +66,7 @@ export function persistDraft(draft: Draft, withRevision = false): Draft {
 
 export const contentStyles = `
 ${animationStyles}
+${imageAnimationStyles}
 ${advancedTextStyles}
 span[data-text-draggable] { display: inline-block; min-height: 1em; white-space: pre-wrap; overflow-wrap: anywhere; }
 body { font-family: ${defaultFontFamily}, sans-serif; color: #25342f; font-size: 15px; line-height: 1.9; letter-spacing: 0; min-height: 100vh; isolation: isolate; box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }

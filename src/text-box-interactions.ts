@@ -1,6 +1,7 @@
 import type { Editor } from 'tinymce';
 import { setAdvancedEditing, textSource, selectAdvancedObject } from './text-advanced';
 import { isTextLocked, setSelectedTextBox, selectionHasLockedText } from './text-box-state';
+import { cornerResizeScale } from './resize-geometry';
 
 const selector = 'span[data-text-draggable]';
 
@@ -94,7 +95,7 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
     const west = g.kind.includes('w'); const north = g.kind.includes('n');
     let width = Math.max(32, g.width + (west ? -g.dx : g.dx));
     if (g.kind.length === 2) {
-      const scale = Math.max(8 / g.fonts[0].size, 32 / g.width, Math.abs(g.dx / g.width) >= Math.abs(g.dy / g.height) ? width / g.width : (g.height + (north ? -g.dy : g.dy)) / g.height);
+      const scale = cornerResizeScale(g.width, g.height, g.dx, g.dy, g.kind, Math.max(8 / g.fonts[0].size, 32 / g.width));
       width = g.width * scale;
       return { width, x: west ? g.width - width : 0, y: north ? g.height * (1 - scale) : 0, scale };
     }
