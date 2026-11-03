@@ -38,7 +38,12 @@ export function enableDanmakuDragging(editor: Editor): () => void {
     drag = { element, capture: element, pointer: event.pointerId, x: event.clientX, y: event.clientY, left: rect.left, top: rect.top, width: element.tagName === 'IMG' ? imageGeometry(element).width : rect.width,
       dx: 0, dy: 0, moved: false };
     drag.capture.setPointerCapture(event.pointerId);
-    // 图片的默认按下事件交给 TinyMCE，保留选中工具条和缩放手柄。
+    // Own image selection while dragging: native mouse selection can otherwise
+    // drift to its paragraph, hiding the panel and discarding its active tab.
+    if (element.tagName === 'IMG') {
+      editor.focus(); editor.selection.select(element); editor.nodeChanged();
+      event.preventDefault();
+    }
     if (element.matches('div[data-danmaku-source]')) { event.preventDefault(); event.stopPropagation(); }
   }
   function move(event: PointerEvent) {
@@ -53,7 +58,8 @@ export function enableDanmakuDragging(editor: Editor): () => void {
     }
     const previewSelector = `body > ${path.join(' > ')}`;
     // translate 独立于 rotate/scale，鼠标沿屏幕方向移动，翻转后也不会反向。
-    style.textContent = `${cursorRules}\n${previewSelector}{translate:${drag.dx}px ${drag.dy}px!important;cursor:grabbing!important}`;
+    style.textContent = `${cursorRules}\n${previewSelector}{translate:${drag.dx}px ${drag.dy}px!important;cursor:grabbing!important}
+      ${previewSelector} + [data-image-stroke-for]{translate:${drag.dx}px ${drag.dy}px!important}`;
     // 位移只发生在预览 CSS 中，需显式让 TinyMCE 重新计算四角手柄。
     updateSelectionControls(drag.element);
     event.preventDefault(); event.stopPropagation();

@@ -35,7 +35,7 @@ for (const [name, kind] of cases) test(`${name}七种图层位置按画布定位
   if (kind !== 'danmaku') await panel.getByRole('tab', { name: '排版', exact: true }).click();
   const group = panel.getByRole('group', { name: '图层位置', exact: true });
   await expect(group.getByRole('button')).toHaveCount(7);
-  if (kind === 'text') await expect(panel.getByRole('combobox', { name: '文字对齐', exact: true })).toBeVisible();
+  if (kind === 'text') await expect(panel.getByRole('group', { name: '文字对齐', exact: true })).toBeVisible();
   for (const label of labels) {
     const before = await geometry(page);
     await group.getByRole('button', { name: label, exact: true }).click();

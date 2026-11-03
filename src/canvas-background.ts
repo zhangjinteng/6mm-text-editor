@@ -2,6 +2,7 @@ import type { Editor } from 'tinymce';
 import { installColorPickers } from './text-color-picker';
 import { parseShadowColor } from './text-shadow';
 import { isCanvasSelection } from './blank-selection';
+import { decorateCanvasSettings } from './canvas-settings-dialog';
 
 const selector = 'div.document-background-color';
 export function readCanvasBackground(editor: Editor) {
@@ -55,14 +56,16 @@ export function registerCanvasBackground(editor: Editor): void {
       const { rgb, alpha } = background();
       const initialColor = '#' + rgb.map(channel => Math.round(channel).toString(16).padStart(2, '0')).join('');
       let colorPickers: ReturnType<typeof installColorPickers> | undefined;
-      editor.windowManager.open({
+      let presentation: ReturnType<typeof decorateCanvasSettings> | undefined;
+      const api = editor.windowManager.open({
         title: '画布设置',
         body: { type: 'panel', items: [
           { type: 'htmlpanel', html: '<h3 data-canvas-color-fields>画布背景</h3>' },
           { type: 'input', name: 'color', label: '背景颜色' },
           { type: 'input', name: 'transparency', label: '背景透明度（0–100%）', inputMode: 'numeric' },
           { type: 'button', name: 'clear', text: '清除背景颜色' },
-          { type: 'htmlpanel', html: '<p>0% 为不透明，100% 为完全透明；只影响背景颜色。点击“应用设置”保存背景调整。</p><h3>插入内容</h3><p>打开对应窗口选择内容，确认插入后即加入画布。</p>' },
+          { type: 'htmlpanel', html: '<p data-canvas-background-hint>只调整背景颜色的透明度，文字和图片保持原有效果。</p>' },
+          { type: 'htmlpanel', html: '<p data-canvas-insert-hint>选择内容加入画布，确认插入后即生效。</p>' },
           { type: 'bar', items: [
             { type: 'button', name: 'text', text: '插入文字' },
             { type: 'button', name: 'image', text: '插入图片' },
@@ -72,17 +75,18 @@ export function registerCanvasBackground(editor: Editor): void {
         initialData: { color: initialColor, transparency: String(Math.round((1 - alpha) * 100)) },
         buttons: [{ type: 'cancel', text: '取消' }, { type: 'submit', text: '应用设置', primary: true }],
         onAction: (api, details) => {
-          if (details.name === 'clear') { api.setData({ color: '', transparency: '0' }); colorPickers?.refresh(); return; }
+          if (details.name === 'clear') { api.setData({ color: '', transparency: '0' }); colorPickers?.refresh(); presentation?.update(); return; }
           const command = { text: 'CanvasInsertText', image: 'mceImage', emoji: 'mceEmoticons' }[details.name];
           if (command && !editor.mode.isReadOnly()) editor.execCommand(command);
         },
-        onClose: () => colorPickers?.dispose(),
+        onClose: () => { colorPickers?.dispose(); presentation?.dispose(); },
         onChange: (api, details) => {
           if (details.name === 'color') {
             const parsed = parseShadowColor(api.getData().color, editor.getContainer().ownerDocument);
             if (parsed) api.setData({ color: parsed.color, ...(parsed.opacity === undefined ? {} : { transparency: String(100 - parsed.opacity) }) });
           }
           colorPickers?.refresh();
+          presentation?.update();
         },
         onSubmit: api => {
           const { color, transparency: raw } = api.getData();
@@ -104,6 +108,7 @@ export function registerCanvasBackground(editor: Editor): void {
       });
       const doc = editor.getContainer().ownerDocument;
       const root = doc.querySelector<HTMLElement>('[data-canvas-color-fields]')!.closest<HTMLElement>('.tox-dialog')!;
+      presentation = decorateCanvasSettings(editor, root, api);
       const [colorField, transparencyField] = root.querySelectorAll<HTMLInputElement>('.tox-dialog__body input');
       if (colorField && transparencyField) {
         const group = colorField.parentElement!;

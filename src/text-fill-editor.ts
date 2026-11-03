@@ -162,6 +162,7 @@ export function createFillEditor(doc: Document, initial: FillLayer[], callbacks:
     const uploaded = file.files?.[0], layer = current(); if (!uploaded || !layer || disposed) return;
     if (uploaded.size > 5 * 1024 * 1024 || !/^image\/(png|jpeg|webp|gif)$/.test(uploaded.type)) { callbacks.error('请选择不超过 5 MB 的 PNG、JPEG、WebP 或 GIF 图片。'); file.value = ''; return; }
     const request = ++version, layerId = layer.id; callbacks.busy(true); callbacks.error('');
+    let uploadedLayer = false;
     try {
       let result = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(uploaded); });
       const image = new Image(); image.src = result; await image.decode();
@@ -172,9 +173,12 @@ export function createFillEditor(doc: Document, initial: FillLayer[], callbacks:
         if (result.length > 500000) throw new Error('Texture too large');
       }
       const target = layers.find(layer => layer.id === layerId);
-      if (!disposed && request === version && target?.type === 'image') { target.image = result; changed(); }
+      if (!disposed && request === version && target?.type === 'image') { target.image = result; uploadedLayer = true; }
     } catch { if (!disposed && request === version) callbacks.error('图片无法处理，请重新选择。'); }
     finally { if (!disposed && request === version) callbacks.busy(false); file.value = ''; }
+    // The sidebar commits on change. Release the upload lock first so that
+    // this final value can be applied (and its image validation owns busy).
+    if (uploadedLayer && !disposed && request === version) changed();
   });
   refreshList(); renderProperties();
   return {

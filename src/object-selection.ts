@@ -1,6 +1,6 @@
 import type { Editor } from 'tinymce';
 import { contentBounds } from './object-layout';
-import { imageGeometry, rotatePoint } from './image-geometry';
+import { imageGeometry, imageKeepsAspectRatio, rotatePoint } from './image-geometry';
 import { imageLayoutRect } from './image-animation';
 import { enableImageSelection } from './image-selection';
 import { cornerResizeScale } from './resize-geometry';
@@ -51,6 +51,7 @@ export function enableObjectSelection(editor: Editor): () => void {
       const box = selected.tagName === 'IMG' ? imageLayoutRect(selected) : selected.getBoundingClientRect();
       const geometry = selected.tagName === 'IMG' ? imageGeometry(selected) : { width: box.width, height: box.height, angle: 0 };
       resize = { element: selected, handle, pointer: event.pointerId, x: event.clientX, y: event.clientY, left: box.left, top: box.top, width: geometry.width, height: geometry.height, angle: geometry.angle, corner: handle.dataset.corner!, dx: 0, dy: 0, moved: false };
+      editor.focus();
       handle.setPointerCapture(event.pointerId);
       event.preventDefault(); event.stopImmediatePropagation();
       return;
@@ -74,11 +75,13 @@ export function enableObjectSelection(editor: Editor): () => void {
   function dimensions(current: NonNullable<typeof resize>) {
     const west = current.corner.includes('w'); const north = current.corner.includes('n');
     const local = rotatePoint(current.dx, current.dy, -current.angle);
-    let width = Math.max(32, current.width + (west ? -local.x : local.x));
-    let height = Math.max(32, current.height + (north ? -local.y : local.y));
-    if (current.element.tagName === 'IMG') {
+    const image = current.element.tagName === 'IMG';
+    const minimum = image ? 1 : 32;
+    let width = Math.max(minimum, current.width + (west ? -local.x : local.x));
+    let height = Math.max(minimum, current.height + (north ? -local.y : local.y));
+    if (image && imageKeepsAspectRatio(current.element)) {
       const scale = cornerResizeScale(current.width, current.height, local.x, local.y, current.corner,
-        Math.max(32 / current.width, 32 / current.height));
+        Math.max(minimum / current.width, minimum / current.height));
       width = current.width * scale; height = current.height * scale;
     }
     const dw = width - current.width, dh = height - current.height;
@@ -106,7 +109,9 @@ export function enableObjectSelection(editor: Editor): () => void {
     for (let node: Element | null = resize.element; node && node !== doc.body; node = node.parentElement) {
       path.unshift(`:nth-child(${Array.from(node.parentElement!.children).indexOf(node) + 1})`);
     }
-    preview.textContent = `body > ${path.join(' > ')}{box-sizing:border-box!important;width:${size.width}px!important;height:${size.height}px!important;translate:${size.translateX}px ${size.translateY}px!important}`;
+    const selector = `body > ${path.join(' > ')}`;
+    preview.textContent = `${selector}{box-sizing:border-box!important;width:${size.width}px!important;height:${size.height}px!important;translate:${size.translateX}px ${size.translateY}px!important}
+      ${selector} + [data-image-stroke-for]{translate:${size.translateX}px ${size.translateY}px!important}`;
     update(); editor.dispatch('ScrollContent'); event.preventDefault(); event.stopImmediatePropagation();
   }
   function up(event: PointerEvent) {

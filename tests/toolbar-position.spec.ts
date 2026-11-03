@@ -166,6 +166,7 @@ test('表情符号在画布设置中显示并可插入', async ({ page }) => {
     await expect(popup.locator('[data-mce-name="canvassettings"]')).toHaveCount(1);
     await checkPosition(page, 'bottom');
     await popup.locator('[data-mce-name="canvassettings"]').click();
+    await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('tab', { name: '插入', exact: true }).click();
     await page.getByRole('dialog', { name: '画布设置', exact: true }).getByRole('button', { name: '表情符号', exact: true }).click();
     const dialog = page.getByRole('dialog').filter({ has: page.getByRole('textbox', { name: '搜索', exact: true }) });
     await expect(dialog.getByRole('textbox', { name: '搜索', exact: true })).toBeVisible();

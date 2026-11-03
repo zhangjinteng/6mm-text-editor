@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { Image, Smile, Type, X } from '@lucide/vue';
+import { Image, Wallpaper, Smile, Type, X } from '@lucide/vue';
 import type { Editor } from 'tinymce';
 import { isBlankSelection } from '../blank-selection';
 import { applyCanvasBackground, readCanvasBackground } from '../canvas-background';
@@ -118,6 +118,7 @@ onBeforeUnmount(() => { detach?.(); colorPickers?.dispose(); });
           <button @click="insert('CanvasInsertText')"><Type :size="20" /><span>插入文字</span></button>
           <button @click="insert('mceImage')"><Image :size="20" /><span>插入图片</span></button>
           <button @click="insert('mceEmoticons')"><Smile :size="20" /><span>表情符号</span></button>
+          <button @click="insert('CanvasSetBackgroundImage')"><Wallpaper :size="20" /><span>设置画布背景图</span></button>
         </div>
         <p class="canvas-config-hint">选择内容后加入画布，文字会插入到刚才点击的位置。</p>
       </section>

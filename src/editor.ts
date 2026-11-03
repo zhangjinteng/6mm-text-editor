@@ -10,6 +10,8 @@ import { registerAdvancedText } from './text-advanced';
 import { registerTextSettings } from './text-settings';
 import { registerTextObjectTools } from './text-object-tools';
 import { registerTextTypography } from './text-typography';
+import { registerTextListMarkers } from './text-list-markers';
+import { registerTextLayout } from './text-layout';
 import { registerTextDragging } from './text-dragging';
 import { registerTextClearFormat } from './text-clear-format';
 import { registerSelectionHeadings } from './selection-headings';
@@ -85,6 +87,8 @@ export function editorOptions(settings: Settings, callbacks: {
     autosave_ask_before_unload: true, autosave_interval: '15s', autosave_retention: '1440m', autosave_prefix: 'test44-tinymce-',
     save_onsavecallback: callbacks.save,
     setup: (editor) => {
+      registerTextLayout(editor);
+      registerTextListMarkers(editor);
       registerAdvancedText(editor);
       registerTextObjectTools(editor);
       registerTextSettings(editor);

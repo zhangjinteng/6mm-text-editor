@@ -1,5 +1,6 @@
 import { svgNode } from './text-stroke';
 import { parseShadowColor as parseColor } from './text-shadow';
+import { isVerticalText } from './text-writing-mode';
 
 export const backgroundShapes = { rect: '矩形', rounded: '圆角矩形', pill: '胶囊', ellipse: '椭圆', bubble: '气泡', slant: '斜切', cloud: '云朵', wave: '波浪', hexagon: '六边形', bevel: '切角', ticket: '票券', ribbon: '丝带' } as const;
 export type BackgroundShape = keyof typeof backgroundShapes;
@@ -102,17 +103,22 @@ function textLines(box: HTMLElement): BackgroundRect[] {
     const range = box.ownerDocument.createRange(); range.selectNodeContents(node);
     for (const rect of range.getClientRects()) if (rect.width > .1 && rect.height > .1) rects.push({ x: (rect.left - origin.left) / scaleX, y: (rect.top - origin.top) / scaleY, width: rect.width / scaleX, height: rect.height / scaleY });
   }
+  const vertical = isVerticalText(box);
+  if (vertical) for (const rect of rects) Object.assign(rect, transposeRect(rect));
   rects.sort((a, b) => a.y - b.y || a.x - b.x); const lines: BackgroundRect[] = [];
   for (const rect of rects) {
     const line = lines.find(line => Math.min(line.y + line.height, rect.y + rect.height) - Math.max(line.y, rect.y) > Math.min(line.height, rect.height) * .6);
     if (!line) lines.push({ ...rect });
     else { const right = Math.max(line.x + line.width, rect.x + rect.width), bottom = Math.max(line.y + line.height, rect.y + rect.height); line.x = Math.min(line.x, rect.x); line.y = Math.min(line.y, rect.y); line.width = right - line.x; line.height = bottom - line.y; }
   }
-  return lines;
+  return vertical ? lines.map(transposeRect) : lines;
 }
-export function drawBackground(parent: Element, value: TextBackground, rects: BackgroundRect[]) {
+function transposeRect(rect: BackgroundRect): BackgroundRect {
+  return { x: rect.y, y: rect.x, width: rect.height, height: rect.width };
+}
+export function drawBackground(parent: Element, value: TextBackground, rects: BackgroundRect[], vertical = false) {
   const group = svgNode(parent.ownerDocument, 'g', { opacity: String(value.opacity / 100) }, parent);
-  if (value.layout === 'connected') svgNode(parent.ownerDocument, 'path', { d: connectedPath(rects, value.radius), fill: value.color }, group);
+  if (value.layout === 'connected') svgNode(parent.ownerDocument, 'path', { d: connectedPath(vertical ? rects.map(transposeRect) : rects, value.radius), fill: value.color, ...(vertical ? { transform: 'matrix(0 1 1 0 0 0)' } : {}) }, group);
   else for (const rect of rects) svgNode(parent.ownerDocument, 'path', { d: backgroundPath(value.shape, rect, value.radius), fill: value.color }, group);
 }
 const signatures = new WeakMap<HTMLElement, string>();
@@ -122,17 +128,17 @@ export function renderTextBackground(box: HTMLElement) {
   const value = readBackground(box);
   if (!value?.visible) { existing?.remove(); signatures.delete(box); return; }
   if (!box.offsetWidth || !box.offsetHeight) return;
-  const curved = !!box.dataset.textCurve;
+  const curved = !!box.dataset.textCurve && !isVerticalText(box);
   const measured = value.layout !== 'box' && !curved ? textLines(box) : [];
   const base = measured.length ? measured : [{ x: 0, y: 0, width: box.offsetWidth, height: box.offsetHeight }];
   const rects = base.map(rect => ({ x: f(rect.x + rect.width * (1 - value.scaleX / 100) / 2 - value.expandX + value.offsetX), y: f(rect.y + rect.height * (1 - value.scaleY / 100) / 2 - value.expandY + value.offsetY), width: f(rect.width * value.scaleX / 100 + value.expandX * 2), height: f(rect.height * value.scaleY / 100 + value.expandY * 2) }));
-  const signature = JSON.stringify([value, rects]); if (existing && signatures.get(box) === signature) return;
+  const signature = JSON.stringify([value, rects, isVerticalText(box)]); if (existing && signatures.get(box) === signature) return;
   const left = Math.min(...rects.map(rect => rect.x)), top = Math.min(...rects.map(rect => rect.y)), right = Math.max(...rects.map(rect => rect.x + rect.width)), bottom = Math.max(...rects.map(rect => rect.y + rect.height));
   const width = Math.max(1, f(right - left)), height = Math.max(1, f(bottom - top));
   const doc = box.ownerDocument, layer = doc.createElement('span'); layer.dataset.textBackgroundRender = 'true'; layer.dataset.backgroundLayout = value.layout; layer.contentEditable = 'false'; layer.setAttribute('aria-hidden', 'true');
   Object.assign(layer.style, { left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px` });
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); svg.setAttribute('viewBox', `${left} ${top} ${width} ${height}`); svg.setAttribute('width', String(width)); svg.setAttribute('height', String(height)); svg.setAttribute('aria-hidden', 'true');
-  drawBackground(svg, value, rects); layer.append(svg); if (existing) existing.replaceWith(layer); else box.prepend(layer); signatures.set(box, signature);
+  drawBackground(svg, value, rects, isVerticalText(box)); layer.append(svg); if (existing) existing.replaceWith(layer); else box.prepend(layer); signatures.set(box, signature);
 }
 export const textBackgroundStyles = `
 [data-text-background-settings]{position:relative;isolation:isolate}

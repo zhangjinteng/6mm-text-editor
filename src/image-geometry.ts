@@ -1,5 +1,11 @@
 import { imageLayoutRect } from './image-animation';
 
+/** Older images keep the original proportional-resize behavior. */
+export function imageKeepsAspectRatio(element: HTMLElement): boolean {
+  try { return JSON.parse(element.getAttribute('data-image-settings') || '{}')?.keepRatio !== false; }
+  catch { return true; }
+}
+
 /** 图片的布局尺寸与旋转后的外接矩形分开计算，避免移动或缩放累积变形。 */
 export function imageGeometry(element: HTMLElement) {
   const style = element.ownerDocument.defaultView!.getComputedStyle(element);

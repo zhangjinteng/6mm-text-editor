@@ -4,7 +4,7 @@ import { defaultFontFamily, installFonts } from './fonts';
 import { defaultDeform, readDeform, writeDeform, validateDeform } from './text-deform';
 import { createDeformEditor } from './text-deform-editor';
 import { advancedTextStyles, ensureSource, renderAdvancedText, selectAdvancedObject } from './text-advanced';
-import { currentTextBox, isTextLocked } from './text-box-state';
+import { currentTextBox, isTextLocked, setSelectedTextBox } from './text-box-state';
 import './text-settings.css';
 import { installTextColorPickers } from './text-color-picker';
 import { outerLayerObject, readObjectLayers, setObjectLayerPosition } from './object-layers';
@@ -19,11 +19,13 @@ import { readShadow, writeShadow, validateShadow, type TextShadow } from './text
 import { createShadowEditor } from './text-shadow-editor';
 import { readBackground, writeBackground, validateBackground, type TextBackground } from './text-background';
 import { createBackgroundEditor } from './text-background-editor';
+import { applyWritingMode, readWritingMode, writingModes } from './text-writing-mode';
+import { layoutDefaults, readTextLayout, validateTextLayout, applyTextLayout } from './text-layout';
 
 const defaults = {
-  positions: [] as LayerPosition[], ...defaultTextStyle, clearFormatting: false, textLocked: false, layerPosition: 1,
+  positions: [] as LayerPosition[], ...layoutDefaults, ...defaultTextStyle, clearFormatting: false, textLocked: false, layerPosition: 1,
   fontFamily: 'sans-serif', fontSize: '24', textColor: '#000000', highlightColor: 'transparent',
-  paragraphFormat: 'p', textDirection: 'ltr', paragraphQuote: false,
+  paragraphFormat: 'p', textDirection: 'ltr', paragraphQuote: false, writingMode: 'horizontal-tb',
   opacity: '100', background: null as TextBackground | null,
   stroke: false, strokeColor: '#000000', strokeWidth: '1', strokePosition: 'center', strokeJoin: 'miter',
   shadow: null as TextShadow | null,
@@ -34,12 +36,20 @@ type Tab = 'style' | 'layout' | 'object' | 'basic' | 'paragraph' | 'appearance' 
 const limits = { opacity: [0, 100], strokeWidth: [0, 10] } as const;
 type Numeric = keyof typeof limits;
 const pixels = (value: string, fallback = 0) => Number.isFinite(parseFloat(value)) ? parseFloat(value) : fallback;
+const textAlignments = [
+  ['start', '起始端', 'M4 4v16M8 6h12M8 10h8M8 14h12M8 18h8'],
+  ['end', '末尾端', 'M20 4v16M4 6h12M8 10h8M4 14h12M8 18h8'],
+  ['left', '左对齐', 'M4 6h16M4 10h10M4 14h16M4 18h10'],
+  ['center', '居中', 'M4 6h16M7 10h10M4 14h16M7 18h10'],
+  ['right', '右对齐', 'M4 6h16M10 10h10M4 14h16M10 18h10'],
+  ['justify', '两端对齐', 'M4 6h16M4 10h16M4 14h16M4 18h16']
+] as const;
 function read(box: HTMLElement): Settings {
   const s = box.style, d = box.dataset;
   return {
-    positions: [], ...readTextStyle(box), clearFormatting: false, textLocked: isTextLocked(box),
+    positions: [], ...readTextLayout(box), ...readTextStyle(box), clearFormatting: false, textLocked: isTextLocked(box),
     layerPosition: readObjectLayers(box.ownerDocument.body).indexOf(outerLayerObject(box)) + 1,
-    ...readBasicTextSettings(box), ...readParagraphSettings(box),
+    ...readBasicTextSettings(box), ...readParagraphSettings(box), writingMode: readWritingMode(box),
     opacity: String(Math.round(pixels(s.opacity, 1) * 100)), background: readBackground(box),
     stroke: d.textStrokeEnabled !== 'false' && (d.textStrokeEnabled === 'true' || pixels(s.getPropertyValue('-webkit-text-stroke-width')) > 0),
     strokeWidth: d.textStrokeWidth ?? String(pixels(s.getPropertyValue('-webkit-text-stroke-width'), 1)), strokeColor: d.textStrokeColor || s.getPropertyValue('-webkit-text-stroke-color') || defaults.strokeColor,
@@ -49,6 +59,8 @@ function read(box: HTMLElement): Settings {
   };
 }
 function validate(s: Settings, doc: Document): string {
+  if (!(writingModes as readonly string[]).includes(s.writingMode)) return '请选择文字横排或文字竖排。';
+  const layoutError = validateTextLayout(s); if (layoutError) return layoutError;
   const styleError = validateTextStyle(s); if (styleError) return styleError;
   const paragraphError = validateParagraphSettings(s); if (paragraphError) return paragraphError;
   const basicError = validateBasicTextSettings(s, doc); if (basicError) return basicError;
@@ -70,6 +82,7 @@ function apply(box: HTMLElement, s: Settings, initial: Settings, width: number, 
     initial = { ...initial, ...readBasicTextSettings(box), ...readParagraphSettings(box), ...readTextStyle(box) };
   }
   const different = (...keys: (keyof Settings)[]) => keys.some(key => s[key] !== initial[key]);
+  if (different('writingMode')) applyWritingMode(box, s.writingMode);
   applyParagraphSettings(box, s, initial, paragraphStyles);
   applyBasicTextSettings(box, s, initial);
   applyTextStyle(box, s, initial);
@@ -82,11 +95,11 @@ function apply(box: HTMLElement, s: Settings, initial: Settings, width: number, 
   }
   if (JSON.stringify(s.shadow) !== JSON.stringify(initial.shadow)) writeShadow(box, s.shadow);
   if (JSON.stringify(s.layers) !== JSON.stringify(initial.layers)) {
-    if (!box.style.width || box.style.width === 'auto') Object.assign(box.style, { width: `${width}px`, boxSizing: 'border-box' });
+    if (s.writingMode !== 'vertical-rl' && (!box.style.width || box.style.width === 'auto')) Object.assign(box.style, { width: `${width}px`, boxSizing: 'border-box' });
     ensureSource(box); writeFills(box, s.layers);
   }
   if (JSON.stringify(s.deformation) !== JSON.stringify(initial.deformation)) {
-    if (!box.style.width || box.style.width === 'auto') Object.assign(box.style, { width: `${width}px`, boxSizing: 'border-box' });
+    if (s.writingMode !== 'vertical-rl' && (!box.style.width || box.style.width === 'auto')) Object.assign(box.style, { width: `${width}px`, boxSizing: 'border-box' });
     ensureSource(box);
     writeDeform(box, s.deformation);
   }
@@ -95,6 +108,7 @@ function apply(box: HTMLElement, s: Settings, initial: Settings, width: number, 
     writeAnimation(box, s.animation);
   }
   for (const child of [box, ...box.querySelectorAll<HTMLElement>('[style]')]) child.removeAttribute('data-mce-style');
+  applyTextLayout(box, s, different('writingMode') && box.hasAttribute('data-text-sizing') ? { ...initial, textSizing: '' } : initial, different('fontSize') ? s.fontSize : undefined);
   renderAdvancedText(box);
 }
 
@@ -119,8 +133,9 @@ export function registerTextSettings(editor: Editor): void {
       }
     });
   }
-  function open(tab: Tab, panel?: { host: HTMLElement; box: HTMLElement; onClose: () => void }) {
-    const box = panel?.box ?? currentTextBox(editor); if (!box || !canOpen(box) || (!panel && dispose)) return;
+  function open(tab: Tab, panel?: { host: HTMLElement; box: HTMLElement; effect?: string; onClose: () => void }) {
+    const targetBox = panel?.box ?? currentTextBox(editor); if (!targetBox || !canOpen(targetBox) || (!panel && dispose)) return;
+    let box: HTMLElement = targetBox;
     const locked = isTextLocked(box); if (locked) tab = 'object';
     const doc = editor.getContainer().ownerDocument, dialog = doc.createElement(panel ? 'div' : 'dialog');
     dialog.className = panel ? 'text-settings-dialog text-settings-embedded' : 'text-settings-dialog'; dialog.setAttribute('aria-label', '文字设置');
@@ -143,8 +158,17 @@ export function registerTextSettings(editor: Editor): void {
       <button type="button" class="text-settings-action" data-clear-format>清除格式</button>
       <p class="text-settings-hint">应用到整个文字对象。混合状态表示文字包含不同样式；清除格式后仍可预览或取消。</p></section>
       <section role="tabpanel" data-section="layout" id="text-panel-layout" aria-labelledby="text-tab-layout" hidden>
+      <div class="text-layout-modes" role="group" aria-label="文字排版">${[['auto-height','自动高度','↕'],['auto-width','自动宽度','↔'],['fixed','固定宽高','□'],['auto-font','自动字号','A↔']].map(([value,label,icon]) => `<button type="button" data-layout-mode="${value}" aria-pressed="false" title="${label}"><b aria-hidden="true">${icon}</b><span>${label}</span></button>`).join('')}</div>
+      <div class="text-layout-dimensions">${[['boxWidth','文本框宽度'],['boxHeight','文本框高度']].map(([name,label]) => `<label>${label}<span><input type="text" inputmode="decimal" name="${name}" aria-label="${label}"><small>px</small></span></label>`).join('')}</div>
+      <div class="text-alignment-controls text-layout-inline"><h3>框内垂直对齐</h3><div class="text-alignment-buttons" role="group" aria-label="框内垂直对齐">${[['top','上对齐'],['middle','垂直居中'],['bottom','下对齐']].map(([value,label]) => `<button type="button" data-vertical-alignment="${value}" aria-pressed="false">${label}</button>`).join('')}</div></div>
+      <div class="text-alignment-controls text-layout-inline"><h3>列表样式</h3><div class="text-alignment-buttons text-list-buttons" role="group" aria-label="文字列表">${[['none','无样式'],['unordered','无序列表'],['ordered','有序列表']].map(([value,label]) => `<button type="button" data-text-list="${value}" aria-pressed="false">${label}</button>`).join('')}</div></div>
+      ${select('caseMode','大小写',[['none','保持原样'],['uppercase','全部大写'],['lowercase','全部小写'],['capitalize','首字母大写']])}
+      ${[['firstLineIndent','首行缩进','100'],['paragraphSpacing','段落间距','10']].map(([name,label,max]) => `<label class="text-settings-size text-layout-stepper">${label}<span><button type="button" data-layout-step="${name}" data-delta="-1" aria-label="减少${label}">−</button><input type="text" inputmode="decimal" name="${name}" aria-label="${label}" placeholder="0—${max}"><button type="button" data-layout-step="${name}" data-delta="1" aria-label="增加${label}">+</button></span></label>`).join('')}
+      <p class="text-settings-hint">首行缩进 0–100 字符，段落间距 0–10 倍字号；按回车分段，Shift+回车换行。自动字号在设定字号内适配文本框。</p>
+      ${select('writingMode', '文字排列', [['horizontal-tb', '文字横排'], ['vertical-rl', '文字竖排']])}
+      <p class="text-writing-mode-hint">竖排文字从上到下，换列从右到左。曲线变形在横排时显示。</p>
       ${layerPositionControls()}
-      ${select('textAlign', '文字对齐', [['start', '起始端'], ['end', '末尾端'], ['left', '左对齐'], ['center', '居中'], ['right', '右对齐'], ['justify', '两端对齐']])}
+      <div class="text-alignment-controls"><h3>文字对齐</h3><div class="text-alignment-buttons" role="group" aria-label="文字对齐">${textAlignments.map(([value, label, path]) => `<button type="button" data-text-align="${value}" aria-pressed="false" title="${label}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="${path}"/></svg><span>${label}</span></button>`).join('')}</div></div>
       <label class="text-settings-select">行距倍数<input type="text" inputmode="decimal" name="lineHeight" aria-label="行距倍数" placeholder="0.5—5" list="text-line-heights"></label>
       <datalist id="text-line-heights">${['1', '1.2', '1.5', '1.75', '2', '2.5', '3'].map(value => `<option value="${value}"></option>`).join('')}</datalist>
       <label class="text-settings-select">字间距（px）<input type="text" inputmode="decimal" name="letterSpacing" aria-label="字间距（px）" placeholder="混合，请输入新值"></label>
@@ -213,6 +237,22 @@ export function registerTextSettings(editor: Editor): void {
     const frame = dialog.querySelector('iframe')!, error = dialog.querySelector<HTMLElement>('[role="alert"]')!, applyButton = dialog.querySelector<HTMLButtonElement>('[data-apply]')!;
     let previewDoc: Document | undefined;
     let colorPickers: ReturnType<typeof installTextColorPickers> | undefined;
+    const listButtons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-text-list]'));
+    const refreshLists = () => {
+      if (panel && !busy) initial.listStyle = draft.listStyle = readTextLayout(box).listStyle;
+      listButtons.forEach(button => {
+        button.setAttribute('aria-pressed', String(draft.listStyle === button.dataset.textList));
+        button.disabled = !canChange(box);
+      });
+    };
+    listButtons.forEach(button => button.addEventListener('click', () => {
+      if (!canChange(box)) return;
+      const chosen = button.dataset.textList!;
+      draft.listStyle = draft.listStyle === chosen ? 'none' : chosen;
+      invalidateCheck(); message(''); refresh();
+    }));
+    const listEvents = 'NodeChange ExecCommand Undo Redo SwitchMode TextBoxLockChanged';
+    if (panel) { refreshLists(); editor.on(listEvents, refreshLists); }
     const message = (text: string) => { error.textContent = text; error.hidden = !text; };
     const invalidateCheck = () => { ++applyVersion; if (checking) { checking = false; busy = false; applyButton.disabled = false; applyButton.textContent = '应用设置'; } };
     const preview = () => {
@@ -222,9 +262,16 @@ export function registerTextSettings(editor: Editor): void {
       clone.querySelectorAll('[data-mce-bogus], [data-text-render]').forEach(node => node.remove());
       for (const node of [clone, ...clone.querySelectorAll<HTMLElement>('*')]) { node.removeAttribute('id'); node.removeAttribute('contenteditable'); node.classList.remove('text-advanced-editing'); }
       clone.dataset.textRenderId = 'preview-' + crypto.randomUUID();
-      Object.assign(clone.style, { position: 'absolute', display: 'inline-block', boxSizing: 'border-box', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', width: `${width}px`, maxWidth: 'none', transform: 'none', rotate: 'none', scale: 'none', pointerEvents: 'none' });
+      Object.assign(clone.style, { position: 'absolute', display: 'inline-block', boxSizing: 'border-box', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', width: initial.writingMode === 'vertical-rl' ? 'auto' : `${width}px`, maxWidth: 'none', transform: 'none', rotate: 'none', scale: 'none', pointerEvents: 'none' });
       clone.classList.remove('text-advanced-editing');
       previewDoc.body.replaceChildren(clone); apply(clone, draft, initial, width, paragraphStyles, plain);
+      if (draft.listStyle !== initial.listStyle) {
+        clone.querySelectorAll('[data-text-list-marker]').forEach(n => n.remove());
+        if (draft.listStyle !== 'none') {
+          const marker = previewDoc.createElement('span'); marker.dataset.textListMarker = 'true'; marker.textContent = draft.listStyle === 'ordered' ? '1.\u00a0' : '•\u00a0';
+          ensureSource(clone).prepend(marker); renderAdvancedText(clone);
+        }
+      }
       const background = clone.querySelector<HTMLElement>(':scope > [data-text-background-render]');
       const bx = parseFloat(background?.style.left ?? '') || 0, by = parseFloat(background?.style.top ?? '') || 0;
       const minX = Math.min(0, bx), minY = Math.min(0, by);
@@ -264,6 +311,12 @@ export function registerTextSettings(editor: Editor): void {
         const value = draft[button.dataset.styleToggle as 'styleBold' | 'styleItalic' | 'styleUnderline' | 'styleStrike'];
         button.setAttribute('aria-pressed', value === 'mixed' ? 'mixed' : String(value === 'on'));
       });
+      dialog.querySelectorAll<HTMLButtonElement>('[data-text-align]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.textAlign === draft.textAlign));
+        button.disabled = locked || draft.textLocked;
+        const logical = ['start', 'end'].includes(button.dataset.textAlign!);
+        button.querySelector('svg')!.style.transform = logical && draft.textDirection === 'rtl' ? 'scaleX(-1)' : '';
+      });
       dialog.querySelector<HTMLButtonElement>('[data-clear-highlight]')!.disabled = draft.highlightColor === 'transparent';
       const layerCount = readObjectLayers(editor.getBody()).length;
       dialog.querySelector('[data-layer-position]')!.textContent = `第 ${draft.layerPosition} / ${layerCount} 层`;
@@ -272,10 +325,27 @@ export function registerTextSettings(editor: Editor): void {
         button.disabled = locked || draft.textLocked || draft.layerPosition < 1 || (up ? draft.layerPosition >= layerCount : draft.layerPosition <= 1);
       });
       dialog.querySelectorAll<HTMLButtonElement>('[data-position]').forEach(button => { button.disabled = locked || draft.textLocked; });
+      dialog.querySelectorAll<HTMLButtonElement>('[data-layout-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.layoutMode === draft.textSizing)));
+      dialog.querySelectorAll<HTMLButtonElement>('[data-vertical-alignment]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.verticalAlignment === draft.verticalAlignment)));
+      listButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.textList === draft.listStyle)));
+      (input('boxWidth') as HTMLInputElement).disabled = locked || draft.textLocked || draft.textSizing === 'auto-width';
+      (input('boxHeight') as HTMLInputElement).disabled = locked || draft.textLocked || draft.textSizing === 'auto-height' || (draft.textSizing === 'auto-width' && draft.writingMode !== 'vertical-rl');
+      dialog.querySelectorAll<HTMLButtonElement>('[data-layout-step]').forEach(b => { const key = b.dataset.layoutStep as 'firstLineIndent' | 'paragraphSpacing'; const n = Number(draft[key]); b.disabled = locked || draft.textLocked || (Number(b.dataset.delta) < 0 ? n <= 0 : n >= (key === 'firstLineIndent' ? 100 : 10)); });
       colorPickers?.refresh();
       preview();
     };
+    // Update only the displayed value during a gesture: preview sizes must not
+    // enter the settings draft or create extra undo steps.
+    const resized = (event: { box: HTMLElement }) => {
+      if (event.box === box && !closed) {
+        input('fontSize').value = readBasicTextSettings(box).fontSize;
+        for (const key of ['boxWidth', 'boxHeight'] as const) input(key).value = readTextLayout(box)[key];
+      }
+    };
+    if (panel) editor.on('TextBoxSizeChanged', resized);
     const close = () => {
+      if (panel) editor.off(listEvents, refreshLists);
+      if (panel) editor.off('TextBoxSizeChanged', resized);
       if (closed) return; closed = true; ++applyVersion; colorPickers?.dispose(); fillEditor.dispose(); shadowEditor.dispose(); window.removeEventListener('resize', preview); dialog.remove(); if (panel) disposePanel = undefined; else dispose = undefined;
       if (!panel && !editor.removed && box.isConnected) { editor.focus(); if (isTextLocked(box)) editor.selection.select(box); else selectAdvancedObject(editor, box); editor.nodeChanged(); editor.dispatch('ResizeContent'); }
     };
@@ -296,7 +366,8 @@ export function registerTextSettings(editor: Editor): void {
           event.preventDefault(); activate(tabs[next]!); tabs[next]!.focus();
         });
       });
-      if (tabs.length) activate(tabs.find(button => button.dataset[key] === tab) ?? tabs[0]!);
+      const selected = key === 'effect' ? panel?.effect ?? 'opacity' : tab;
+      if (tabs.length) activate(tabs.find(button => button.dataset[key] === selected) ?? tabs[0]!);
     };
     if (locked) {
       dialog.querySelectorAll<HTMLButtonElement>('[data-tab]:not([data-tab=object])').forEach(button => { button.disabled = true; });
@@ -318,12 +389,29 @@ export function registerTextSettings(editor: Editor): void {
       const key = button.dataset.styleToggle as 'styleBold' | 'styleItalic' | 'styleUnderline' | 'styleStrike';
       draft[key] = draft[key] === 'on' ? 'off' : 'on'; invalidateCheck(); message(''); refresh();
     }));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-text-align]').forEach(button => button.addEventListener('click', () => {
+      if (locked || draft.textLocked || !canChange(box) || draft.textAlign === button.dataset.textAlign) return;
+      draft.textAlign = button.dataset.textAlign!; invalidateCheck(); message(''); refresh();
+    }));
     dialog.querySelector('[data-clear-format]')!.addEventListener('click', () => {
       draft = { ...draft, ...defaultTextStyle, ...plain, textAlign: draft.textAlign, highlightColor: 'transparent', paragraphFormat: 'p', clearFormatting: true };
       invalidateCheck(); message(''); refresh();
     });
     dialog.querySelectorAll<HTMLButtonElement>('[data-font-step]').forEach(button => button.addEventListener('click', () => {
       draft.fontSize = String(Math.max(1, Math.min(1000, (parseFloat(draft.fontSize) || 24) + Number(button.dataset.fontStep))));
+      invalidateCheck(); message(''); refresh();
+    }));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-layout-mode]').forEach(button => button.addEventListener('click', () => {
+      draft.textSizing = button.dataset.layoutMode!;
+      invalidateCheck(); message(''); refresh();
+    }));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-vertical-alignment]').forEach(button => button.addEventListener('click', () => {
+      draft.verticalAlignment = button.dataset.verticalAlignment!;
+      invalidateCheck(); message(''); refresh();
+    }));
+    dialog.querySelectorAll<HTMLButtonElement>('[data-layout-step]').forEach(button => button.addEventListener('click', () => {
+      const key = button.dataset.layoutStep as 'firstLineIndent' | 'paragraphSpacing';
+      draft[key] = String(Math.max(0, Math.min(key === 'firstLineIndent' ? 100 : 10, Number(draft[key]) + Number(button.dataset.delta))));
       invalidateCheck(); message(''); refresh();
     }));
     dialog.querySelector('[data-clear-highlight]')!.addEventListener('click', () => { draft.highlightColor = 'transparent'; invalidateCheck(); message(''); refresh(); });
@@ -338,7 +426,7 @@ export function registerTextSettings(editor: Editor): void {
       if (locked || draft.textLocked || !canChange(box)) return;
       draft.positions.push(button.dataset.position as LayerPosition); invalidateCheck(); message(''); refresh();
     }));
-    dialog.querySelector('[data-reset]')!.addEventListener('click', () => { ++applyVersion; busy = false; applyButton.disabled = false; draft = { ...structuredClone(defaults), ...Object.fromEntries(Object.keys(defaultTextStyle).map(key => [key, draft[key as keyof typeof defaultTextStyle]])), clearFormatting: draft.clearFormatting, textLocked: draft.textLocked, layerPosition: draft.layerPosition, positions: draft.positions, fontFamily: draft.fontFamily, fontSize: draft.fontSize, textColor: draft.textColor, highlightColor: draft.highlightColor, paragraphFormat: draft.paragraphFormat, textDirection: draft.textDirection, paragraphQuote: draft.paragraphQuote }; fillEditor.reset(draft.layers); shadowEditor.reset(draft.shadow); backgroundEditor.reset(draft.background); deformEditor.reset(draft.deformation); animationEditor.reset(draft.animation); message(''); refresh(); });
+    dialog.querySelector('[data-reset]')!.addEventListener('click', () => { ++applyVersion; busy = false; applyButton.disabled = false; draft = { ...structuredClone(defaults), ...Object.fromEntries(Object.keys(defaultTextStyle).map(key => [key, draft[key as keyof typeof defaultTextStyle]])), clearFormatting: draft.clearFormatting, textLocked: draft.textLocked, layerPosition: draft.layerPosition, positions: draft.positions, fontFamily: draft.fontFamily, fontSize: draft.fontSize, textColor: draft.textColor, highlightColor: draft.highlightColor, paragraphFormat: draft.paragraphFormat, textDirection: draft.textDirection, paragraphQuote: draft.paragraphQuote, writingMode: draft.writingMode, ...Object.fromEntries(Object.keys(layoutDefaults).map(key => [key, draft[key as keyof typeof layoutDefaults]])) }; fillEditor.reset(draft.layers); shadowEditor.reset(draft.shadow); backgroundEditor.reset(draft.background); deformEditor.reset(draft.deformation); animationEditor.reset(draft.animation); message(''); refresh(); });
     const commit = async (duplicate = false) => {
       if (closed || busy || !canOpen(box) || isTextLocked(box) !== locked) return;
       const invalid = locked ? '' : validate(draft, doc); if (invalid) { message(invalid); return; }
@@ -355,18 +443,28 @@ export function registerTextSettings(editor: Editor): void {
         if (valid.includes(false)) { message('图片加载失败，请检查地址或重新上传。'); return; }
       }
       if (!canOpen(box) || isTextLocked(box) !== locked) return;
+      const nextList = draft.listStyle;
+      busy = true;
       if (submitted !== JSON.stringify(initial)) editor.undoManager.transact(() => {
         if (!locked) {
           apply(box, draft, initial, width, paragraphStyles, plain);
+          if (draft.listStyle !== initial.listStyle) {
+            selectAdvancedObject(editor, box);
+            editor.execCommand(draft.listStyle === 'none' ? 'RemoveList' : draft.listStyle === 'ordered' ? 'InsertOrderedList' : 'InsertUnorderedList');
+            const replacement = editor.selection.getNode().closest<HTMLElement>('span[data-text-draggable]');
+            if (replacement) box = replacement;
+          }
           if (!draft.textLocked) for (const position of draft.positions.slice(initial.positions.length)) positionLayer(editor, box, position);
           if (draft.layerPosition !== initial.layerPosition) setObjectLayerPosition(editor, box, draft.layerPosition);
         }
         editor.dom.setAttrib(box, 'data-text-locked', draft.textLocked ? 'true' : null);
         editor.dom.setAttrib(box, 'contenteditable', draft.textLocked ? 'false' : null);
       });
+      busy = false; draft.listStyle = nextList;
       if (panel && !duplicate && draft.textLocked === initial.textLocked) {
         Object.assign(initial, structuredClone(draft));
         draft.clearFormatting = initial.clearFormatting = false;
+        setSelectedTextBox(editor, box, true);
         editor.dispatch('change'); editor.dispatch('ResizeContent');
         return;
       }

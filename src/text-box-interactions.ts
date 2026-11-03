@@ -1,7 +1,9 @@
 import type { Editor } from 'tinymce';
-import { setAdvancedEditing, textSource, selectAdvancedObject } from './text-advanced';
+import { setAdvancedEditing, textSource, selectAdvancedObject, renderAdvancedText } from './text-advanced';
 import { isTextLocked, setSelectedTextBox, selectionHasLockedText } from './text-box-state';
 import { cornerResizeScale } from './resize-geometry';
+import { isVerticalText } from './text-writing-mode';
+import { updateTextLayout } from './text-layout';
 
 const selector = 'span[data-text-draggable]';
 
@@ -11,7 +13,7 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
   const frame = doc.createElement('div');
   frame.className = 'text-box-frame'; frame.setAttribute('data-mce-bogus', 'all'); frame.contentEditable = 'false';
   frame.style.cssText = 'display:none;position:fixed;border:1px solid #4099ff;box-sizing:border-box;pointer-events:none;z-index:2147483646';
-  for (const side of ['nw', 'ne', 'sw', 'se', 'w', 'e']) {
+  for (const side of ['nw', 'ne', 'sw', 'se', 'w', 'e', 'n', 's']) {
     const handle = doc.createElement('span'); handle.dataset.textResize = side;
     handle.setAttribute('aria-label', `调整文本框 ${side}`);
     handle.style.cssText = `position:absolute;width:10px;height:10px;background:white;border:1px solid #4099ff;box-sizing:border-box;pointer-events:auto;touch-action:none;cursor:${side.length === 1 ? 'ew' : side}-resize;${side.includes('w') ? 'left:-6px' : 'right:-6px'};${side.includes('n') ? 'top:-6px' : side.includes('s') ? 'bottom:-6px' : 'top:calc(50% - 5px)'}`;
@@ -22,8 +24,24 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
   css.textContent = `${selector}{cursor:grab;touch-action:none;min-height:1em;white-space:pre-wrap;overflow-wrap:anywhere} body.text-object-selected{caret-color:transparent} body.text-object-selected ::selection{background:transparent} body.text-content-editing ${selector}{cursor:text;touch-action:auto}`;
   doc.head.append(css, preview);
   let selected: HTMLElement | undefined; let editing = false;
-  type Gesture = { element: HTMLElement; capture: HTMLElement; pointer: number; kind: string; x: number; y: number; left: number; top: number; width: number; height: number; dx: number; dy: number; moved: boolean; fonts: { node: HTMLElement; size: number }[] };
+  type Gesture = { element: HTMLElement; capture: HTMLElement; pointer: number; kind: string; layout: string; vertical: boolean; x: number; y: number; left: number; top: number; width: number; height: number; dx: number; dy: number; moved: boolean; fonts: { node: HTMLElement; size: number }[] };
   let gesture: Gesture | undefined;
+  let serializedPreview: string | undefined;
+  function beforeSerialize() {
+    if (!gesture?.moved || !preview.textContent) return;
+    serializedPreview = preview.textContent; preview.textContent = '';
+    renderAdvancedText(gesture.element);
+  }
+  function afterSerialize() {
+    if (serializedPreview === undefined) return;
+    const styles = serializedPreview; serializedPreview = undefined;
+    if (!gesture?.moved) return;
+    preview.textContent = styles; renderAdvancedText(gesture.element);
+  }
+  // Generated SVGs are part of the saved document. Serialize their committed
+  // geometry even when autosave runs while a pointer is still held down.
+  editor.on('BeforeGetContent', beforeSerialize, true);
+  editor.on('GetContent', afterSerialize);
   function path(node: Element) {
     const parts: string[] = [];
     for (let el: Element | null = node; el && el !== doc.body; el = el.parentElement) parts.unshift(`:nth-child(${Array.from(el.parentElement!.children).indexOf(el) + 1})`);
@@ -35,6 +53,24 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
     const box = selected.getBoundingClientRect();
     Object.assign(frame.style, { display: 'block', left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
     for (const child of frame.children) (child as HTMLElement).style.display = editing || isTextLocked(selected) ? 'none' : 'block';
+    const vertical = isVerticalText(selected);
+    const fixed = ['fixed', 'auto-font'].includes(selected.dataset.textSizing ?? '');
+    for (const [index, side] of (vertical ? ['w', 'e'] : ['n', 's']).entries()) {
+      const h = frame.children[index + 6] as HTMLElement; h.dataset.textResize = side; h.setAttribute('aria-label', `调整文本框 ${side}`);
+      h.style.display = fixed && !editing && !isTextLocked(selected) ? 'block' : 'none';
+      Object.assign(h.style, { cursor: vertical ? 'ew-resize' : 'ns-resize', left: vertical ? index === 0 ? '-6px' : 'auto' : 'calc(50% - 5px)', right: vertical && index === 1 ? '-6px' : 'auto', top: !vertical && index === 0 ? '-6px' : vertical ? 'calc(50% - 5px)' : 'auto', bottom: !vertical && index === 1 ? '-6px' : 'auto' });
+    }
+    for (const [index, side] of (vertical ? ['n', 's'] : ['w', 'e']).entries()) {
+      const handle = frame.children[index + 4] as HTMLElement;
+      handle.dataset.textResize = side; handle.setAttribute('aria-label', `调整文本框 ${side}`);
+      Object.assign(handle.style, {
+        cursor: vertical ? 'ns-resize' : 'ew-resize',
+        left: vertical ? 'calc(50% - 5px)' : index === 0 ? '-6px' : 'auto',
+        right: !vertical && index === 1 ? '-6px' : 'auto',
+        top: vertical ? index === 0 ? '-6px' : 'auto' : 'calc(50% - 5px)',
+        bottom: vertical && index === 1 ? '-6px' : 'auto'
+      });
+    }
   }
   function mode(value: boolean) {
     editing = value; setSelectedTextBox(editor, selected); setAdvancedEditing(selected, editing);
@@ -42,6 +78,11 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
     doc.body.classList.toggle('text-content-editing', !!selected && editing);
     update();
   }
+  const followReplacement = (event: { box?: HTMLElement; preservePanel?: boolean }) => {
+    if (!event.preservePanel || !event.box?.isConnected) return;
+    selected = event.box; mode(false);
+  };
+  editor.on('TextBoxSelectionChanged', followReplacement);
   function select(element?: HTMLElement) {
     setAdvancedEditing(selected, false); selected = element; mode(false);
     if (element) {
@@ -52,9 +93,21 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
     }
   }
   function cancel() {
-    const old = gesture; gesture = undefined; preview.textContent = '';
+    const old = gesture; gesture = undefined; preview.textContent = ''; serializedPreview = undefined;
+    if (old?.moved && old.element.isConnected) renderAdvancedText(old.element);
     if (old?.capture.hasPointerCapture(old.pointer)) old.capture.releasePointerCapture(old.pointer);
     update();
+    if (old?.moved) syncSize(old);
+  }
+  function syncSize(g: Gesture) {
+    if (g.kind.length !== 2 || !g.element.isConnected || editor.removed) return;
+    // The toolbar reads the selection (including the transparent SVG caret),
+    // while the sidebar reads source text. Refresh both from the preview size.
+    // TinyMCE prefers inline font sizes over computed preview CSS. A transient
+    // caret exposes the computed size without serializing preview styles.
+    selectAdvancedObject(editor, g.element, gesture === g);
+    editor.nodeChanged();
+    editor.dispatch('TextBoxSizeChanged', { box: g.element });
   }
   function targetBox(target: Element) {
     const existing = target.closest<HTMLElement>(selector);
@@ -85,42 +138,72 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
     if (editing && element === selected && !handle) return;
     select(element);
     const rect = element.getBoundingClientRect(); const capture = handle ?? element;
-    gesture = { element, capture, pointer: event.pointerId, kind: handle?.dataset.textResize ?? 'move', x: event.clientX, y: event.clientY, left: rect.left, top: rect.top, width: rect.width, height: rect.height, dx: 0, dy: 0, moved: false,
+    gesture = { element, capture, pointer: event.pointerId, kind: handle?.dataset.textResize ?? 'move', layout: element.dataset.textSizing ?? '', vertical: isVerticalText(element), x: event.clientX + view.scrollX, y: event.clientY + view.scrollY, left: rect.left + view.scrollX, top: rect.top + view.scrollY, width: rect.width, height: rect.height, dx: 0, dy: 0, moved: false,
       fonts: [element, ...element.querySelectorAll<HTMLElement>('*')].filter(node => !node.closest('[data-text-render],[data-text-background-render],[data-mce-bogus]')).map(node => ({ node, size: parseFloat(view.getComputedStyle(node).fontSize) })) };
     capture.setPointerCapture(event.pointerId);
     event.preventDefault(); event.stopImmediatePropagation();
   }
   function dimensions(g: Gesture) {
-    if (g.kind === 'move') return { width: g.width, x: g.dx, y: g.dy, scale: 1 };
+    if (g.kind === 'move') return { width: g.width, height: g.height, x: g.dx, y: g.dy, scale: 1 };
     const west = g.kind.includes('w'); const north = g.kind.includes('n');
     let width = Math.max(32, g.width + (west ? -g.dx : g.dx));
     if (g.kind.length === 2) {
-      const scale = cornerResizeScale(g.width, g.height, g.dx, g.dy, g.kind, Math.max(8 / g.fonts[0].size, 32 / g.width));
+      const length = g.vertical ? g.height : g.width;
+      // Match the 1px minimum accepted by the font-size field. Existing tiny
+      // objects must stop at a bound instead of jumping larger on inward drag.
+      const minimum = Math.min(1, Math.max(1 / Math.min(...g.fonts.map(font => font.size)), Math.min(32, length) / length));
+      const scale = cornerResizeScale(g.width, g.height, g.dx, g.dy, g.kind, minimum);
       width = g.width * scale;
-      return { width, x: west ? g.width - width : 0, y: north ? g.height * (1 - scale) : 0, scale };
+      return { width, height: g.height * scale, x: west ? g.width - width : 0, y: north ? g.height * (1 - scale) : 0, scale };
     }
-    return { width, x: west ? g.width - width : 0, y: 0, scale: 1 };
+    if (['fixed', 'auto-font'].includes(g.layout)) {
+      const horizontal = g.kind === 'w' || g.kind === 'e';
+      const w = horizontal ? width : g.width, h = horizontal ? g.height : Math.max(1, g.height + (north ? -g.dy : g.dy));
+      return { width: w, height: h, x: west ? g.width - w : 0, y: north ? g.height - h : 0, scale: 1 };
+    }
+    const height = g.vertical ? Math.max(32, g.height + (north ? -g.dy : g.dy)) : g.height;
+    return { width: g.vertical ? g.width : width, height, x: !g.vertical && west ? g.width - width : 0, y: g.vertical && north ? g.height - height : 0, scale: 1 };
   }
   function move(event: PointerEvent) {
     const g = gesture; if (!g || g.pointer !== event.pointerId) return;
     if (!g.element.isConnected || isTextLocked(g.element)) { cancel(); return; }
-    g.dx = event.clientX - g.x; g.dy = event.clientY - g.y;
+    g.dx = event.clientX + view.scrollX - g.x; g.dy = event.clientY + view.scrollY - g.y;
     if (!g.moved && Math.hypot(g.dx, g.dy) < 4) return;
     g.moved = true; const size = dimensions(g);
-    preview.textContent = `${path(g.element)}{width:${size.width}px!important;max-width:none!important;height:auto!important;box-sizing:border-box!important;translate:${size.x}px ${size.y}px!important}` + (g.kind.length === 2 ? g.fonts.map(f => `${path(f.node)}{font-size:${f.size * size.scale}px!important}`).join('') : '');
-    update(); editor.dispatch('ScrollContent'); event.preventDefault(); event.stopImmediatePropagation();
+    const fontStyles = g.kind.length === 2 && g.layout !== 'auto-font' ? g.fonts.map(f => `${path(f.node)}{font-size:${f.size * size.scale}px!important}`).join('') : '';
+    const paint = (x: number, y: number) => {
+      preview.textContent = `${path(g.element)}{width:${['fixed', 'auto-font'].includes(g.layout) ? `${size.width}px` : g.vertical ? 'auto' : `${size.width}px`}!important;max-width:none!important;height:${['fixed', 'auto-font'].includes(g.layout) ? `${size.height}px` : g.vertical ? `${size.height}px` : 'auto'}!important;box-sizing:border-box!important;translate:${x}px ${y}px!important}` + fontStyles;
+    };
+    paint(size.x, size.y);
+    renderAdvancedText(g.element);
+    if (g.kind !== 'move') {
+      // Curves and wrapped vertical text do not have a height proportional to
+      // the font scale. Anchor against the geometry actually drawn this frame.
+      const actual = g.element.getBoundingClientRect();
+      paint(g.kind.includes('w') ? g.width - actual.width : 0, g.kind.includes('n') ? g.height - actual.height : 0);
+    }
+    update(); syncSize(g); editor.dispatch('ScrollContent'); event.preventDefault(); event.stopImmediatePropagation();
   }
   function up(event: PointerEvent) {
     const g = gesture; if (!g || g.pointer !== event.pointerId) return;
-    const size = dimensions(g); cancel();
+    const size = dimensions(g), drawn = g.element.getBoundingClientRect();
+    const target = { left: drawn.left + view.scrollX, top: drawn.top + view.scrollY };
+    cancel();
     if (g.moved && g.element.isConnected) {
       editor.undoManager.transact(() => {
-        editor.dom.setStyles(g.element, { position: 'absolute', display: 'inline-block', boxSizing: 'border-box', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', width: `${size.width}px`, maxWidth: 'none', height: 'auto' });
-        if (g.kind.length === 2) for (const f of g.fonts) editor.dom.setStyle(f.node, 'fontSize', `${f.size * size.scale}px`);
+        editor.dom.setStyles(g.element, { position: 'absolute', display: 'inline-block', boxSizing: 'border-box', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', width: ['fixed', 'auto-font'].includes(g.layout) ? `${size.width}px` : g.vertical ? 'auto' : `${size.width}px`, maxWidth: 'none', height: ['fixed', 'auto-font'].includes(g.layout) ? `${size.height}px` : g.vertical ? `${size.height}px` : 'auto' });
+        if (g.kind.length === 2 && g.layout !== 'auto-font') for (const f of g.fonts) editor.dom.setStyle(f.node, 'fontSize', `${f.size * size.scale}px`);
+        if (g.layout && g.kind.length === 1 && !['fixed', 'auto-font'].includes(g.layout)) g.element.dataset.textSizing = g.vertical ? 'auto-width' : 'auto-height';
+        updateTextLayout(g.element);
+        renderAdvancedText(g.element);
         const origin = g.element.getBoundingClientRect();
-        editor.dom.setStyles(g.element, { left: `${g.left + size.x - origin.left}px`, top: `${g.top + size.y - origin.top}px` });
+        // Zeroing a tall object's position can clamp the iframe scroll offset.
+        // Compare document coordinates so that this does not move the object.
+        editor.dom.setStyles(g.element, { left: `${target.left - origin.left - view.scrollX}px`, top: `${target.top - origin.top - view.scrollY}px` });
+        // Capture regenerated effects and source styles in the same undo step.
+        renderAdvancedText(g.element);
       });
-      editor.nodeChanged(); editor.dispatch('change'); editor.dispatch('ResizeContent'); update();
+      syncSize(g); editor.nodeChanged(); editor.dispatch('change'); editor.dispatch('ResizeContent'); update();
     }
     event.preventDefault(); event.stopImmediatePropagation();
   }
@@ -143,7 +226,7 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
       event.preventDefault(); event.stopImmediatePropagation(); return;
     }
     if (isTextLocked(selected) && !((event.metaKey || event.ctrlKey) && ['c', 'z', 'a'].includes(event.key.toLowerCase()))) { event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (editing && event.key === 'Enter') { editor.execCommand('InsertLineBreak'); event.preventDefault(); event.stopImmediatePropagation(); return; }
+    if (editing && event.key === 'Enter') { if (event.shiftKey && selected.hasAttribute('data-text-first-line-indent')) editor.insertContent('<br data-text-soft-break="true">'); else editor.execCommand('InsertLineBreak'); event.preventDefault(); event.stopImmediatePropagation(); return; }
     if (editing || event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const element = selected; select(); editor.undoManager.transact(() => element.remove()); editor.dispatch('change');
@@ -167,6 +250,8 @@ export function enableTextBoxInteractions(editor: Editor): () => void {
   editor.on('BeforeSetContent Undo Redo', reset);
   editor.on('NodeChange ResizeContent ScrollContent SwitchMode input', update);
   return () => {
+    editor.off('TextBoxSelectionChanged', followReplacement);
+    editor.off('BeforeGetContent', beforeSerialize); editor.off('GetContent', afterSerialize);
     editor.off('TextBoxLockChanged', lockChanged);
     doc.removeEventListener('paste', blockMutation, true); doc.removeEventListener('cut', blockMutation, true); doc.removeEventListener('drop', blockMutation, true);
     reset(); observer.disconnect(); frame.remove(); css.remove(); preview.remove();

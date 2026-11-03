@@ -6,6 +6,43 @@ export function registerImageBackground(editor: Editor): void {
     editor.selection.controlSelection.hideResizeRect();
     editor.nodeChanged(); editor.dispatch('ResizeContent'); editor.dispatch('ScrollContent'); editor.dispatch('change');
   };
+  editor.addCommand('CanvasSetBackgroundImage', () => {
+    if (editor.mode.isReadOnly()) return;
+    const current = editor.getBody().querySelector<HTMLImageElement>(selector);
+    const original = current?.getAttribute('src') || '';
+    editor.windowManager.open({
+      title: '设置画布背景图',
+      body: { type: 'panel', items: [
+        { type: 'urlinput', name: 'source', label: '图片地址', filetype: 'image' },
+        { type: 'htmlpanel', html: '<p>填写图片地址，或点击右侧按钮选择本地图片（最大 5 MB）。图片会居中铺满画布，边缘可能被裁切。</p>' },
+        ...(current ? [{ type: 'button' as const, name: 'remove', text: '移除背景图' }] : [])
+      ] },
+      initialData: { source: { value: original } },
+      buttons: [{ type: 'cancel', text: '取消' }, { type: 'submit', text: '应用背景图', primary: true }],
+      onAction: (api, details) => {
+        if (details.name === 'remove') { api.close(); editor.execCommand('mceRemoveImageBackground'); }
+      },
+      onSubmit: api => {
+        if (editor.mode.isReadOnly()) { api.close(); return; }
+        const source = api.getData().source.value.trim();
+        let valid = false;
+        try {
+          const url = new URL(source, editor.getDoc().baseURI);
+          valid = !!source && (['http:', 'https:', 'blob:'].includes(url.protocol) || /^data:image\/(png|jpeg|gif|webp|bmp);base64,/i.test(source));
+        } catch { /* Keep the dialog open for an invalid address. */ }
+        if (!valid) { editor.windowManager.alert('请选择图片或输入有效的图片地址。'); return; }
+        api.close();
+        if (source === original) return;
+        editor.undoManager.transact(() => {
+          for (const image of editor.getBody().querySelectorAll(selector)) editor.dom.remove(image.closest('.document-background-layer') || image);
+          const layer = editor.dom.create('div', { class: 'document-background-layer' });
+          layer.append(editor.dom.create('img', { src: source, alt: '', 'data-document-background': 'true' }));
+          editor.getBody().prepend(layer);
+        });
+        changed();
+      }
+    });
+  });
   editor.addCommand('mceImageBackground', () => {
     if (editor.mode.isReadOnly()) return;
     const node = editor.selection.getNode();

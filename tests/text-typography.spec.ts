@@ -62,7 +62,7 @@ test('layout controls style the box, spacing dialog handles mixed text, save/rel
   const frame = page.frameLocator('.tox-edit-area iframe'); const box = frame.locator('[data-text-draggable]');
   await box.click(); const before = (await box.boundingBox())!;
   const dialog = await layout(page);
-  await dialog.getByLabel('文字对齐', { exact: true }).selectOption('center');
+  await dialog.getByRole('group', { name: '文字对齐', exact: true }).getByRole('button', { name: '居中', exact: true }).click();
   await dialog.getByLabel('行距倍数', { exact: true }).fill('2');
   await dialog.getByLabel('字间距（px）', { exact: true }).fill('2');
   await page.screenshot({path:'screenshots/text-typography-controls.png'});

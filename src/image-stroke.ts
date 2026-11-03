@@ -187,6 +187,21 @@ export function registerImageStrokes(editor: Editor) {
   const observed = new Set<HTMLImageElement>();
   const signatures = new WeakMap<HTMLImageElement, string>();
   const pending = new WeakMap<HTMLImageElement, number>(); let revision = 0;
+  // Contours are derived asynchronously. Repainting one must not add a second
+  // undo step for an already committed drag/resize (e.g. TinyMCE's mouseup add).
+  editor.on('BeforeAddUndo', event => {
+    if (!event.lastLevel) return;
+    const current = event.level.fragments?.join('') || event.level.content;
+    const previous = event.lastLevel.fragments?.join('') || event.lastLevel.content;
+    if (!current.includes('data-image-stroke-for') && !previous.includes('data-image-stroke-for')) return;
+    const withoutEffects = (html: string) => {
+      const template = editor.getDoc().createElement('template');
+      template.innerHTML = html;
+      template.content.querySelectorAll(layers).forEach(layer => layer.remove());
+      return template.innerHTML;
+    };
+    if (withoutEffects(current) === withoutEffects(previous)) event.preventDefault();
+  });
   const write = (image: HTMLImageElement, result: Awaited<ReturnType<typeof createImageStroke>>) => {
     let id = image.getAttribute('data-image-stroke-id');
     if (!id) { id = `stroke-${crypto.randomUUID()}`; editor.dom.setAttrib(image, 'data-image-stroke-id', id); }

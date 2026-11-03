@@ -44,6 +44,7 @@ export function straightTextGlyphs(source: HTMLElement, svg: Element, paint: str
     if (current.parentElement?.closest('[data-mce-bogus]')) continue;
     const content = current.textContent ?? ''; const computed = view.getComputedStyle(current.parentElement!);
     const size = parseFloat(computed.fontSize) || 24;
+    const vertical = computed.writingMode.startsWith('vertical');
     if (ctx) ctx.font = `${computed.fontStyle} ${computed.fontWeight} ${size}px ${computed.fontFamily}`;
     const metrics = ctx?.measureText('Mg');
     const ascent = metrics?.fontBoundingBoxAscent ?? size * 0.8;
@@ -57,7 +58,8 @@ export function straightTextGlyphs(source: HTMLElement, svg: Element, paint: str
         const next = end + (content.codePointAt(end)! > 0xffff ? 2 : 1);
         const probe = doc.createRange(); probe.setStart(current, end); probe.setEnd(current, next);
         const rect = probe.getBoundingClientRect();
-        if (Math.abs(rect.top - initial.top) > 1 || Math.abs(rect.bottom - initial.bottom) > 1 || content[end] === '\n') break;
+        if ((vertical ? Math.abs(rect.left - initial.left) > 1 || Math.abs(rect.right - initial.right) > 1
+          : Math.abs(rect.top - initial.top) > 1 || Math.abs(rect.bottom - initial.bottom) > 1) || content[end] === '\n') break;
         end = next;
       }
       range.setEnd(current, end); const rect = range.getBoundingClientRect();
@@ -74,6 +76,12 @@ export function straightTextGlyphs(source: HTMLElement, svg: Element, paint: str
         }
         const rtl = computed.direction === 'rtl';
         const text = svgNode(doc, 'text', { x: String((rtl ? rect.right : rect.left) - origin.left), y: String(rect.top - origin.top + (rect.height - ascent - descent) / 2 + ascent), fill: paint ?? computed.color, 'font-family': computed.fontFamily, 'font-size': computed.fontSize, 'font-weight': computed.fontWeight, 'font-style': computed.fontStyle, 'letter-spacing': computed.letterSpacing, 'text-decoration': computed.textDecorationLine, direction: computed.direction, 'text-anchor': 'start', 'xml:space': 'preserve', textLength: String(rect.width), lengthAdjust: 'spacingAndGlyphs' }, group);
+        if (vertical) {
+          text.setAttribute('x', String(rect.left - origin.left + rect.width / 2));
+          text.setAttribute('y', String((rtl ? rect.bottom : rect.top) - origin.top));
+          text.setAttribute('textLength', String(rect.height));
+          (text as SVGElement).style.cssText = `writing-mode:${computed.writingMode};text-orientation:${computed.textOrientation};dominant-baseline:central`;
+        }
         text.textContent = content.slice(start, end);
       }
       start = end;

@@ -1,8 +1,12 @@
+import { textLayoutStyles, isTextComposing } from './text-layout';
 import type { Editor } from 'tinymce';
 import { readDeform, isWarp, pathGlyphs, warpSvg } from './text-deform';
 import { paintTextStroke, straightTextGlyphs, strokeVisible } from './text-stroke';
 import { needsFillSvg, paintFillLayers } from './text-fill';
 import { renderTextBackground, textBackgroundStyles } from './text-background';
+import { isVerticalText, writingModeStyles } from './text-writing-mode';
+import { captureTextPlayback, measureTextPlaybackAtRest, restoreTextPlayback } from './text-animation-timeline';
+import { textListStyles } from './text-list-markers';
 
 const ns = 'http://www.w3.org/2000/svg';
 const boxes = 'span[data-text-draggable]';
@@ -10,6 +14,8 @@ const renderKeys = new WeakMap<HTMLElement, string>();
 const sourceSelector = ':scope > [data-text-source]';
 export const advancedTextStyles = `
 ${textBackgroundStyles}
+${textListStyles}
+${textLayoutStyles}
 [data-text-draggable][data-text-quote=true]{border-inline-start:3px solid #147d64;padding-inline-start:16px}
 [data-text-source]{display:block;min-height:1em;white-space:pre-wrap;overflow-wrap:anywhere}
 [data-text-render]{display:block;line-height:0;pointer-events:none;user-select:none;text-shadow:none}
@@ -25,6 +31,7 @@ ${textBackgroundStyles}
 [data-text-stroke-render].text-advanced-editing > [data-text-source],[data-text-fill-render].text-advanced-editing > [data-text-source]{visibility:visible}
 [data-text-stroke-render].text-advanced-editing > [data-text-render],[data-text-fill-render].text-advanced-editing > [data-text-render]{display:none}
 [data-text-curve].text-advanced-editing > [data-text-render]{display:none}
+${writingModeStyles}
 `;
 
 export function textSource(box: HTMLElement) { return box.querySelector<HTMLElement>(sourceSelector) ?? box; }
@@ -33,14 +40,21 @@ export function setAdvancedEditing(box: HTMLElement | undefined, editing: boolea
   if (editing) box?.querySelector(':scope > [data-text-caret]')?.remove();
 }
 /** A visible-layout, transparent caret host keeps TinyMCE's selection inside a curved object. */
-export function selectAdvancedObject(editor: Editor, box: HTMLElement) {
-  if (!box.querySelector(':scope > [data-text-render]')) { editor.selection.setCursorLocation(textSource(box), 0); return; }
+export function selectAdvancedObject(editor: Editor, box: HTMLElement, previewSize = false) {
+  const walker = box.ownerDocument.createTreeWalker(textSource(box), NodeFilter.SHOW_TEXT, {
+    acceptNode: node => node.parentElement?.closest('[data-text-list-marker]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  });
+  const firstText = walker.nextNode();
+  if (!previewSize && !box.querySelector(':scope > [data-text-render]')) {
+    box.querySelector(':scope > [data-text-caret]')?.remove();
+    editor.selection.setCursorLocation(firstText ?? textSource(box), 0); return;
+  }
   let caret = box.querySelector<HTMLElement>(':scope > [data-text-caret]');
   if (!caret) {
     caret = box.ownerDocument.createElement('span'); caret.dataset.textCaret = 'true'; caret.setAttribute('data-mce-bogus', 'all');
     caret.style.cssText = 'position:absolute;left:0;top:0;opacity:0;pointer-events:none;width:1px;height:1em'; caret.textContent = '\uFEFF'; box.append(caret);
   }
-  const first = box.ownerDocument.createTreeWalker(textSource(box), NodeFilter.SHOW_TEXT).nextNode()?.parentElement ?? textSource(box);
+  const first = firstText?.parentElement ?? textSource(box);
   const computed = editor.getWin().getComputedStyle(first);
   Object.assign(caret.style, { fontSize: computed.fontSize, fontFamily: computed.fontFamily, fontWeight: computed.fontWeight, fontStyle: computed.fontStyle, color: computed.color });
   editor.selection.setCursorLocation(caret.firstChild!, 0);
@@ -68,6 +82,16 @@ function plainText(source: HTMLElement) {
 
 /** Rebuild only declarative generated markup; original rich text remains the editing model. */
 export function renderAdvancedText(box: HTMLElement) {
+  const playback = captureTextPlayback(box);
+  try {
+    measureTextPlaybackAtRest(box);
+    renderTextLayers(box);
+  } finally {
+    restoreTextPlayback(box, playback);
+  }
+}
+
+function renderTextLayers(box: HTMLElement) {
   // A hidden editor has no measurable layout. Preserve its last valid SVG for preview/export.
   if (!box.getClientRects().length || box.offsetWidth === 0) return;
   const doc = box.ownerDocument; const view = doc.defaultView!;
@@ -82,8 +106,15 @@ export function renderAdvancedText(box: HTMLElement) {
   }
   if (box.hasAttribute('data-text-background-settings')) ensureSource(box);
   const source = box.querySelector<HTMLElement>(sourceSelector); if (!source) return;
+  // TinyMCE can restore a noneditable SVG's caret guard as a bare text node
+  // during undo/redo. Outside the source it creates an extra line box. Keep
+  // real source text (including intentional zero-width characters) untouched.
+  for (const child of Array.from(box.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE && /^\uFEFF+$/.test(child.textContent ?? '')) child.remove();
+  }
   const layered = box.hasAttribute('data-text-fills'), fillSvg = needsFillSvg(box);
-  const deformation = readDeform(box); const deformed = deformation.preset !== 'none';
+  const vertical = isVerticalText(box);
+  const deformation = readDeform(box); const deformed = !vertical && deformation.preset !== 'none';
   const warp = deformed && isWarp(deformation.preset);
   if (deformed) box.dataset.textDeformKind = warp ? 'warp' : 'path'; else delete box.dataset.textDeformKind;
   const curved = deformed;
@@ -204,7 +235,7 @@ export function registerAdvancedText(editor: Editor) {
       sync();
     });
     function sync() {
-      if (updating || editor.removed) return; updating = true; observer.disconnect();
+      if (updating || editor.removed || isTextComposing(doc)) return; updating = true; observer.disconnect();
       try {
         const seen = new Set<string>();
         for (const box of doc.body.querySelectorAll<HTMLElement>(`${boxes}[data-text-deform],${boxes}[data-text-background-settings],${boxes}[data-text-shadow],${boxes}[data-text-fills],${boxes}[data-text-fill],${boxes}[data-text-curve],${boxes}[data-text-stroke-enabled],${boxes}[style*='text-stroke'],${boxes}:has(>[data-text-source])`)) {
@@ -219,10 +250,10 @@ export function registerAdvancedText(editor: Editor) {
       for (const node of nodes) { const classes = (node.attr('class') ?? '').split(/\s+/).filter(name => name !== 'text-advanced-editing'); node.attr('class', classes.join(' ') || null); }
     });
     doc.addEventListener('input', sync, true);
-    editor.on('BeforeGetContent input change SetContent Undo Redo ResizeContent CanvasTextInserted', sync);
+    editor.on('BeforeGetContent input change SetContent Undo Redo ResizeContent CanvasTextInserted compositionend', sync);
     const fontsChanged = () => { for (const box of doc.querySelectorAll<HTMLElement>(boxes)) renderKeys.delete(box); sync(); };
     doc.fonts.addEventListener('loadingdone', fontsChanged);
     sync();
-    editor.on('remove', () => { doc.fonts.removeEventListener('loadingdone', fontsChanged); observer.disconnect(); doc.removeEventListener('input', sync, true); editor.off('BeforeGetContent input change SetContent Undo Redo ResizeContent CanvasTextInserted', sync); });
+    editor.on('remove', () => { doc.fonts.removeEventListener('loadingdone', fontsChanged); observer.disconnect(); doc.removeEventListener('input', sync, true); editor.off('BeforeGetContent input change SetContent Undo Redo ResizeContent CanvasTextInserted compositionend', sync); });
   });
 }

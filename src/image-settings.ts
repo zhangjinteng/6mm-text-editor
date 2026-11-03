@@ -27,7 +27,7 @@ const filters = {
 type Filter = keyof typeof filters;
 const borderStyles = strokePresets;
 type BorderStyle = keyof typeof borderStyles;
-const defaults = { ...imageEffectDefaults, flipX: false, flipY: false, locked: false, rotation: 0, mask: 'none' as Mask, maskSource: '', maskName: '', maskRasterKey: '', maskRasterSource: '', preset: 'none' as Filter, filterStrength: 100, stroke: false, strokeWidth: 4, strokeColor: '#ffffff', strokeStyle: 'solid' as BorderStyle, strokePosition: 'inside' as keyof typeof strokePositions, opacity: 100, radius: 0, brightness: 100, contrast: 100, saturation: 100, hue: 0, shadow: false, shadowX: 0, shadowY: 8, shadowBlur: 16, shadowOpacity: 25, shadowColor: '#000000' };
+const defaults = { ...imageEffectDefaults, flipX: false, flipY: false, locked: false, keepRatio: true, rotation: 0, mask: 'none' as Mask, maskSource: '', maskName: '', maskRasterKey: '', maskRasterSource: '', preset: 'none' as Filter, filterStrength: 100, stroke: false, strokeWidth: 4, strokeColor: '#ffffff', strokeStyle: 'solid' as BorderStyle, strokePosition: 'inside' as keyof typeof strokePositions, opacity: 100, radius: 0, brightness: 100, contrast: 100, saturation: 100, hue: 0, shadow: false, shadowX: 0, shadowY: 8, shadowBlur: 16, shadowOpacity: 25, shadowColor: '#000000' };
 type Settings = typeof defaults;
 const ranges = { ...imageEffectRanges, filterStrength: [0, 100], strokeWidth: [1, 30], rotation: [-180, 180], opacity: [0, 100], radius: [0, 200], brightness: [0, 200], contrast: [0, 200], saturation: [0, 200], hue: [-180, 180], shadowX: [-100, 100], shadowY: [-100, 100], shadowBlur: [0, 100], shadowOpacity: [0, 100] } as const;
 type NumericKey = keyof typeof ranges;
@@ -41,6 +41,7 @@ function readSettings(image: HTMLImageElement): Settings {
   }
   for (const key of ['flipX', 'flipY', 'shadow', 'stroke', 'glow', 'strokeDouble'] as const) settings[key] = saved[key] === true;
   settings.locked = image.getAttribute('data-image-locked') === 'true';
+  settings.keepRatio = saved.keepRatio !== false;
   settings.shadowMode = saved.shadowMode === 'contour' ? 'contour' : 'box';
   if (saved.decoration && Object.hasOwn(decorations, saved.decoration)) settings.decoration = saved.decoration;
   for (const key of ['glowColor', 'decorationColor', 'strokeOuterColor'] as const) if (typeof saved[key] === 'string' && parseShadowColor(saved[key], image.ownerDocument)) settings[key] = saved[key];
@@ -227,7 +228,7 @@ export function registerImageSettings(editor: Editor): void {
           input(key).value = String(settings[key]);
           dialog.querySelector(`output[data-output="${key}"]`)!.textContent = `${settings[key]}${input(key).dataset.unit}`;
         }
-        for (const key of ['flipX', 'flipY', 'locked', 'shadow', 'stroke', 'glow', 'strokeDouble'] as const) input(key).checked = settings[key];
+        for (const key of ['flipX', 'flipY', 'locked', 'keepRatio', 'shadow', 'stroke', 'glow', 'strokeDouble'] as const) input(key).checked = settings[key];
         input('strokeOuterColor').value = settings.strokeOuterColor; input('glowColor').value = settings.glowColor; input('decorationColor').value = settings.decorationColor;
         dialog.querySelector<HTMLSelectElement>('select[name=decoration]')!.value = settings.decoration;
         dialog.querySelector<HTMLSelectElement>('select[name=shadowMode]')!.value = settings.shadowMode;
@@ -341,13 +342,13 @@ export function registerImageSettings(editor: Editor): void {
         if (target.name === 'title') { title = target.value; scheduleCommit(); return; }
         if (target.name === 'width' || target.name === 'height') {
           const value = target.valueAsNumber;
-          if (target.name === 'width') { width = value; if (input('keepRatio').checked && value > 0) height = value / dimensionRatio; }
-          else { height = value; if (input('keepRatio').checked && value > 0) width = value * dimensionRatio; }
+          if (target.name === 'width') { width = value; if (settings.keepRatio && value > 0) height = value / dimensionRatio; }
+          else { height = value; if (settings.keepRatio && value > 0) width = value * dimensionRatio; }
           if (validSize()) dimensionRatio = width / height;
           refresh(); return;
         }
         if (target.name in ranges) settings[target.name as NumericKey] = Number(target.value);
-        else if (['flipX', 'flipY', 'locked', 'shadow', 'stroke', 'glow', 'strokeDouble'].includes(target.name)) settings[target.name as 'flipX'] = target.checked;
+        else if (['flipX', 'flipY', 'locked', 'keepRatio', 'shadow', 'stroke', 'glow', 'strokeDouble'].includes(target.name)) settings[target.name as 'flipX'] = target.checked;
         else if (target.name === 'shadowColor' || target.name === 'strokeColor') {
           const color = parseShadowColor(target.value, doc);
           if (!color) { message('请输入有效的颜色。'); return; }
@@ -423,7 +424,7 @@ export function registerImageSettings(editor: Editor): void {
         reader.onerror = () => { busy = false; applyButton.disabled = false; if (!closed) message('图片文件读取失败，请重新选择。'); };
         reader.readAsDataURL(file);
       });
-      dialog.querySelector('[data-reset]')!.addEventListener('click', () => { settings = { ...defaults, locked: settings.locked }; animation = { ...defaultAnimation }; animationEditor.reset(animation); refresh(); });
+      dialog.querySelector('[data-reset]')!.addEventListener('click', () => { settings = { ...defaults, locked: settings.locked, keepRatio: settings.keepRatio }; animation = { ...defaultAnimation }; animationEditor.reset(animation); refresh(); });
       const commit = async () => {
         if (closed || committing || busy || maskLoading || editor.mode.isReadOnly() || !image.isConnected) return;
         if (['shadowColor', 'strokeColor', 'glowColor', 'decorationColor', 'strokeOuterColor'].some(name => !parseShadowColor(input(name).value, doc))) { message('请输入有效的颜色。'); return; }

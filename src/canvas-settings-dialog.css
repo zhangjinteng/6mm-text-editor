@@ -1,0 +1,42 @@
+.tox .canvas-settings-wrap .tox-dialog-wrap__backdrop{background:#172d2166;backdrop-filter:blur(2px)}
+.tox .tox-dialog.canvas-settings-dialog{box-sizing:border-box;width:min(790px,calc(100vw - 32px));max-width:790px;max-height:calc(100dvh - 32px);border:1px solid #dce6e0;border-radius:14px;box-shadow:0 20px 70px #11291c40;color:#293f34;font:13px/1.5 "PingFang SC",sans-serif}
+.tox .canvas-settings-dialog .tox-dialog__header{padding:18px 22px;border-bottom:1px solid #e5ece7}
+.tox .canvas-settings-dialog .tox-dialog__title{font-size:17px;font-weight:600;color:#293f34;line-height:1.5}
+.tox .canvas-settings-dialog .canvas-settings-subtitle{margin-top:4px;font-size:12px;line-height:1.5;color:#7c8d82}
+.tox .canvas-settings-dialog .tox-dialog__body-content{padding:0;overflow:auto}
+.tox .canvas-settings-dialog .tox-form{display:block}
+.tox .canvas-settings-dialog .canvas-settings-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;min-height:480px}
+.tox .canvas-settings-dialog .canvas-settings-preview{position:relative;display:flex;align-items:center;justify-content:center;margin:20px;min-width:0;min-height:350px;border:1px solid #e1e8e3;border-radius:10px;background:conic-gradient(#edf1ee 25%,#fff 0 50%,#edf1ee 0 75%,#fff 0) 0 0/20px 20px;overflow:hidden}
+.tox .canvas-settings-dialog .canvas-settings-sheet{position:relative;flex:none;border:1px solid #dce6e0;box-shadow:0 4px 18px #293f3410}
+.tox .canvas-settings-dialog iframe{position:absolute;left:0;top:0;max-width:none;border:0;transform-origin:top left;pointer-events:none}
+.tox .canvas-settings-dialog .canvas-settings-preview>span{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#687f71;background:#ffffffe6;border-radius:4px;padding:2px 8px}
+.tox .canvas-settings-dialog .canvas-settings-controls{padding:20px 22px 20px 0;min-width:0}
+.tox .canvas-settings-dialog .canvas-settings-tabs{display:flex;gap:4px;padding:4px;background:#f0f5f2;border-radius:8px;margin-bottom:24px}
+.tox .canvas-settings-dialog .canvas-settings-tabs button{flex:1;border:0;border-radius:5px;padding:9px 4px;background:transparent;color:#74887c;font-size:12px;cursor:pointer}
+.tox .canvas-settings-dialog .canvas-settings-tabs [aria-selected=true]{background:#fff;color:#147d64;box-shadow:0 1px 4px #163f2320;font-weight:600}
+.tox .canvas-settings-dialog [hidden]{display:none!important}
+.tox .canvas-settings-dialog .tox-form__group{margin-bottom:20px}
+.tox .canvas-settings-dialog .tox-label{font-size:12px;color:#536d5c;margin-bottom:8px}
+.tox .canvas-settings-dialog .tox-textfield{border:1px solid #d5e1d9;border-radius:6px;padding:8px;background:#fff;color:#355d48;font:12px/1.5 "PingFang SC",sans-serif;box-shadow:none}
+.tox .canvas-settings-dialog :is(button,input):focus-visible{outline:2px solid #147d64;outline-offset:2px}
+.tox .canvas-settings-dialog .canvas-dialog-color{display:grid;grid-template-columns:30px minmax(0,1fr);gap:6px;position:relative;padding:0}
+.tox .canvas-settings-dialog .canvas-dialog-color>.tox-label{grid-column:1 / -1;margin:0 0 2px}
+.tox .canvas-settings-dialog .canvas-dialog-color>.text-color-trigger{position:relative;width:30px;height:34px}
+.tox .canvas-settings-dialog .canvas-dialog-color>.tox-textfield{width:100%;min-width:0;flex:none}
+.tox .canvas-settings-dialog .canvas-settings-slider{display:block;appearance:auto;width:100%;height:16px;margin:12px 0 4px;accent-color:#147d64;cursor:pointer}
+.tox .canvas-settings-dialog .canvas-settings-scale{display:flex;justify-content:space-between;color:#829286;font-size:10px}
+.tox .canvas-settings-dialog .tox-form__group p{font-size:11px;line-height:1.9;color:#829286}
+.tox .canvas-settings-dialog #canvas-dialog-insert .tox-bar{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.tox .canvas-settings-dialog #canvas-dialog-insert .tox-button{width:100%;padding:14px;border:1px solid #d5e1d9;border-radius:7px;background:#fafcfb;color:#426e57;text-align:left;font-size:12px;font-weight:400}
+.tox .canvas-settings-dialog #canvas-dialog-insert .tox-button:hover{background:#eff7f3;border-color:#147d64}
+.tox .canvas-settings-dialog .tox-dialog__footer{padding:14px 22px;border-top:1px solid #e5ece7;background:white;gap:8px}
+.tox .canvas-settings-dialog .tox-dialog__footer .tox-button{padding:8px 14px;border:0;border-radius:6px;background:#147d64;color:#fff;font-size:12px;font-weight:500;line-height:18px}
+.tox .canvas-settings-dialog .tox-dialog__footer .tox-button--secondary,.tox .canvas-settings-dialog .tox-dialog__footer .canvas-settings-clear{background:transparent;color:#637d6d}
+.tox .canvas-settings-dialog .tox-dialog__footer .tox-button--secondary:hover,.tox .canvas-settings-dialog .tox-dialog__footer .canvas-settings-clear:hover{background:#edf4ef}
+@media(max-width:620px){
+  .tox .tox-dialog.canvas-settings-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}
+  .tox .canvas-settings-dialog .canvas-settings-layout{grid-template-columns:minmax(0,1fr);min-height:0}
+  .tox .canvas-settings-dialog .canvas-settings-preview{min-height:180px;height:180px;margin:16px 16px 0}
+  .tox .canvas-settings-dialog .canvas-settings-controls{padding:16px}
+  .tox .canvas-settings-dialog .tox-dialog__header,.tox .canvas-settings-dialog .tox-dialog__footer{padding:12px 16px}
+}

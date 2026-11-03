@@ -29,7 +29,7 @@ test('样式和排版移入设置，预览隔离，取消与单步撤销保留�
   await expect(preview(page)).toHaveCSS('font-weight', '700');
   await expect(preview(page)).toHaveCSS('font-style', 'italic');
   await d.getByRole('tab', { name: '排版', exact: true }).click();
-  await d.getByLabel('文字对齐', { exact: true }).selectOption('center');
+  await d.getByRole('group', { name: '文字对齐', exact: true }).getByRole('button', { name: '居中', exact: true }).click();
   await d.getByLabel('行距倍数', { exact: true }).fill('2');
   await d.getByLabel('字间距（px）', { exact: true }).fill('3');
   await expect(preview(page)).toHaveCSS('line-height', '48px');
@@ -40,7 +40,7 @@ test('样式和排版移入设置，预览隔离，取消与单步撤销保留�
   await d.getByRole('button', { name: '加粗', exact: true }).click();
   await d.getByRole('button', { name: '斜体', exact: true }).click();
   await d.getByRole('tab', { name: '排版', exact: true }).click();
-  await d.getByLabel('文字对齐', { exact: true }).selectOption('right');
+  await d.getByRole('group', { name: '文字对齐', exact: true }).getByRole('button', { name: '右对齐', exact: true }).click();
   await d.getByLabel('行距倍数', { exact: true }).fill('2');
   await d.getByLabel('字间距（px）', { exact: true }).fill('3');
   await page.screenshot({ path: 'screenshots/text-settings-layout.png' });

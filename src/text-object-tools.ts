@@ -1,6 +1,7 @@
 import type { Editor } from 'tinymce';
 import { selectAdvancedObject } from './text-advanced';
 import { currentTextBox, isTextLocked, selectionHasLockedText } from './text-box-state';
+import { isVerticalText } from './text-writing-mode';
 
 const events = 'NodeChange SelectionChange SwitchMode TextBoxSelected TextBoxLockChanged Undo Redo';
 
@@ -25,7 +26,7 @@ export function registerTextObjectTools(editor: Editor): void {
       clone.removeAttribute('data-text-locked'); clone.removeAttribute('contenteditable');
       original.after(clone);
       const highest = Math.max(0, ...Array.from(editor.getBody().querySelectorAll<HTMLElement>('img,div[data-danmaku-source],span[data-text-draggable]')).map(node => parseInt(editor.getWin().getComputedStyle(node).zIndex) || 0));
-      editor.dom.setStyles(clone, { position: 'absolute', display: 'inline-block', boxSizing: 'border-box', width: `${bounds.width}px`, maxWidth: 'none', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', zIndex: String(Math.min(highest + 1, 2147480000)) });
+      editor.dom.setStyles(clone, { position: 'absolute', display: 'inline-block', boxSizing: 'border-box', width: isVerticalText(original) ? 'auto' : `${bounds.width}px`, maxWidth: 'none', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0', zIndex: String(Math.min(highest + 1, 2147480000)) });
       const origin = clone.getBoundingClientRect();
       editor.dom.setStyles(clone, { left: `${bounds.left + 24 - origin.left}px`, top: `${bounds.top + 24 - origin.top}px` });
     });

@@ -1,6 +1,7 @@
 import type { Editor } from 'tinymce';
 import { imageLayoutRect } from './image-animation';
 import { imageGeometry } from './image-geometry';
+import { isVerticalText } from './text-writing-mode';
 import './layer-position.css';
 
 export const layerPositions = [
@@ -34,8 +35,9 @@ export function positionLayer(editor: Editor, element: HTMLElement, position: La
   const y = position === 'top' ? canvas.top : position === 'bottom' ? canvas.bottom - before.height :
     position === 'center' || position === 'vertical-center' ? canvas.top + (canvas.height - before.height) / 2 : before.top;
   const size = image ? imageGeometry(element) : { width: element.offsetWidth, height: element.offsetHeight };
+  const verticalText = element.matches('[data-text-draggable]') && isVerticalText(element);
   editor.dom.setStyles(element, { position: 'absolute', left: '0px', top: '0px', right: 'auto', bottom: 'auto', margin: '0',
-    boxSizing: 'border-box', width: `${size.width}px`, ...(image ? { height: `${size.height}px` } : {}) });
+    boxSizing: 'border-box', width: verticalText ? 'auto' : `${size.width}px`, ...(image ? { height: `${size.height}px` } : {}) });
   // Measure the actual containing block origin, including nested positioned parents and rotation.
   const origin = measure(), left = x - origin.left, top = y - origin.top;
   editor.dom.setStyles(element, { left: `${left}px`, top: `${top}px` });

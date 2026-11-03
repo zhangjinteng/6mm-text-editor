@@ -13,8 +13,7 @@ export function registerTextTypography(editor: Editor): void {
   function changed() { editor.nodeChanged(); editor.dispatch('ResizeContent'); editor.dispatch('change'); }
   function restore(element: HTMLElement) {
     if (!element.isConnected) return;
-    if (element.querySelector(':scope > [data-text-render]')) selectAdvancedObject(editor, element);
-    else { const walker = editor.getDoc().createTreeWalker(textSource(element), NodeFilter.SHOW_TEXT); editor.selection.setCursorLocation(walker.nextNode() ?? element, 0); }
+    selectAdvancedObject(editor, element);
     editor.nodeChanged();
   }
   editor.on('BeforeExecCommand', event => {

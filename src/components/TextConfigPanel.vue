@@ -11,24 +11,27 @@ const target = shallowRef<HTMLElement>();
 let detach: (() => void) | undefined;
 let version = 0;
 let activeTab = 'basic';
+let activeEffect = 'opacity';
 function rememberTab(event: Event) {
   const tab = (event.target as Element).closest<HTMLElement>('[data-tab]');
   if (tab) activeTab = tab.dataset.tab!;
+  const effect = (event.target as Element).closest<HTMLElement>('[data-effect]');
+  if (effect) activeEffect = effect.dataset.effect!;
 }
 let dismissed: HTMLElement | undefined;
 
-async function select(box?: HTMLElement, force = false) {
+async function select(box?: HTMLElement, force = false, preservePanel = false) {
   if (!props.enabled || !box?.isConnected || props.editor?.mode.isReadOnly()) box = undefined;
   if (box && box === dismissed) return;
   if (!force && box === target.value) return;
-  if (box !== target.value) activeTab = 'basic';
+  if (box && box !== target.value && !preservePanel) { activeTab = 'basic'; activeEffect = 'opacity'; }
   target.value = box;
   emit('active', !!box);
   const request = ++version;
   await nextTick();
   if (request !== version || !props.editor || !host.value) return;
   props.editor.execCommand('TextSettingsPanel', false, box ? {
-    host: host.value, box, tab: activeTab,
+    host: host.value, box, tab: activeTab, effect: activeEffect,
     onClose: () => { dismissed = box; target.value = undefined; emit('active', false); }
   } : null);
   props.editor.dispatch('ResizeEditor');
@@ -37,9 +40,9 @@ async function select(box?: HTMLElement, force = false) {
 watch(() => [props.editor, props.enabled] as const, ([editor, enabled]) => {
   detach?.(); detach = undefined; dismissed = undefined;
   if (!editor || !enabled) { void select(); return; }
-  const selected = (event: { box?: HTMLElement }) => {
+  const selected = (event: { box?: HTMLElement; preservePanel?: boolean }) => {
     dismissed = undefined;
-    void select(event.box);
+    void select(event.box, false, event.preservePanel);
   };
   const clicked = () => { dismissed = undefined; void select(currentTextBox(editor), !host.value?.firstChild); };
   const selection = () => {

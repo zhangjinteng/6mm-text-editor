@@ -32,7 +32,7 @@ export function registerCanvasInsertion(editor: Editor): void {
           const layers = Array.from(editor.getBody().querySelectorAll<HTMLElement>('img,div[data-danmaku-source],span[data-text-draggable]'))
             .map(node => parseInt(view.getComputedStyle(node).zIndex, 10) || 0);
           editor.dom.setStyles(element, {
-            position: 'absolute', left: '0px', top: '0px', display: 'inline-block', margin: '0',
+            position: 'absolute', left: '0px', top: '0px', display: 'inline-block', margin: '0', fontSize: '60px',
             whiteSpace: 'pre-wrap', overflowWrap: 'break-word', maxWidth: `${Math.max(32, doc.documentElement.clientWidth - x - 16)}px`,
             zIndex: String(Math.min(2147480000, Math.max(0, ...layers) + 1))
           });
