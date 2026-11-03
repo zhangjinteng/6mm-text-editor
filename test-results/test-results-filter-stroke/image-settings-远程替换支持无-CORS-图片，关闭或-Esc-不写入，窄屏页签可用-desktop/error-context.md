@@ -1,0 +1,170 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: image-settings.spec.ts >> 远程替换支持无 CORS 图片，关闭或 Esc 不写入，窄屏页签可用
+- Location: tests/image-settings.spec.ts:94:1
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - link "TinyMCE Studio" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e12]:
+        - textbox "文档名称" [ref=e13]: 创作手记
+        - generic [ref=e14]: 已保存到本地
+      - generic [ref=e17]:
+        - button "新建文档" [ref=e18] [cursor=pointer]
+        - button "导入文件" [ref=e20] [cursor=pointer]
+        - button "保存文档" [ref=e23] [cursor=pointer]
+        - button "导出" [ref=e29] [cursor=pointer]
+        - button "编辑器配置" [ref=e36] [cursor=pointer]
+    - navigation "文档视图" [ref=e40]:
+      - generic [ref=e41]:
+        - button "编辑" [ref=e42] [cursor=pointer]
+        - button "HTML" [ref=e45] [cursor=pointer]
+        - button "预览" [ref=e50] [cursor=pointer]
+      - generic [ref=e54]:
+        - button "直播弹幕" [ref=e55] [cursor=pointer]
+        - button "本地版本" [ref=e62] [cursor=pointer]:
+          - generic [ref=e67]: "0"
+        - button "28" [ref=e68] [cursor=pointer]
+    - main [ref=e72]:
+      - region "文档编辑区" [ref=e73]:
+        - application [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - menubar [ref=e79]:
+                - menuitem "文件" [ref=e80]
+                - menuitem "编辑" [ref=e82]
+                - menuitem "查看" [ref=e84]
+                - menuitem "插入" [ref=e86]
+                - menuitem "格式" [ref=e88]
+                - menuitem "工具" [ref=e90]
+                - menuitem "表格" [ref=e92]
+                - menuitem "帮助" [ref=e94]
+              - generic [ref=e96]:
+                - toolbar [ref=e97]:
+                  - group [ref=e98]:
+                    - button "恢复" [ref=e99]
+                    - button "重做" [disabled] [ref=e100]
+                  - group [ref=e101]:
+                    - button "保存" [ref=e102]
+                    - button "恢复上次的草稿" [disabled] [ref=e103]
+                  - group [ref=e104]:
+                    - button "文本块段落" [ref=e105]:
+                      - generic [ref=e106]: 段落
+                    - button "字体PingFang SC,Microsoft YaHei,sans-serif" [ref=e110]:
+                      - generic [ref=e111]: PingFang SC,Microsoft YaHei,sans-serif
+                    - generic [ref=e115]:
+                      - button "Decrease font size" [ref=e116]
+                      - textbox [ref=e120]: 15px
+                      - button "Increase font size" [ref=e121]
+                  - group [ref=e125]:
+                    - button "粗体" [ref=e126]
+                    - button "斜体" [ref=e127]
+                    - button "下划线" [ref=e128]
+                    - button "删除线" [ref=e129]
+                  - group [ref=e130]:
+                    - button "文本颜色 黑色" [ref=e131]
+                    - button "字体颜色菜单" [ref=e132]
+                    - button "背景颜色 黑色" [ref=e135]
+                    - button "背景颜色菜单" [ref=e136]
+                  - group [ref=e139]:
+                    - button "清除格式" [ref=e140]
+                - toolbar [ref=e141]:
+                  - group [ref=e142]:
+                    - button "左对齐" [ref=e143]
+                    - button "居中对齐" [ref=e144]
+                    - button "右对齐" [ref=e145]
+                    - button "两端对齐" [ref=e146]
+                  - group [ref=e147]:
+                    - button "无序列表" [ref=e148]
+                    - button "无序列表" [ref=e149]
+                    - button "有序列表" [ref=e152]
+                    - button "有序列表" [ref=e153]
+                  - group [ref=e156]:
+                    - button "减少缩进" [disabled] [ref=e157]
+                    - button "增加缩进" [ref=e158]
+                    - button "行高" [ref=e159]
+                  - group [ref=e163]:
+                    - button "插入/编辑链接" [ref=e164]
+                    - button "插入/编辑图片" [pressed] [ref=e165]
+                    - button "插入/编辑媒体" [ref=e166]
+                    - button "表格" [ref=e167]
+                  - group [ref=e171]:
+                    - button "特殊字符" [ref=e172]
+                  - group [ref=e173]:
+                    - button "查找和替换" [ref=e174]
+                - toolbar [ref=e175]:
+                  - group [ref=e176]:
+                    - button "源代码" [ref=e177]
+                    - button "预览" [ref=e178]
+                    - button "打印" [ref=e179]
+                  - group [ref=e180]:
+                    - button "插入折叠面板" [ref=e181]
+                    - button "删除折叠面板" [ref=e182]
+                  - group [ref=e183]:
+                    - button "锚点" [ref=e184]
+                    - button "分页符" [ref=e185]
+                    - button "不间断空格" [ref=e186]
+                    - button "插入日期/时间" [ref=e187]
+                    - button "插入日期/时间菜单" [ref=e188]
+                    - button "插入/编辑代码示例" [ref=e191]
+                  - group [ref=e192]:
+                    - button "由左到右" [ref=e193]
+                    - button "由右到左" [ref=e194]
+                  - group [ref=e195]:
+                    - button "下标" [ref=e196]
+                    - button "上标" [ref=e197]
+                  - group [ref=e198]:
+                    - button "显示区块边框" [ref=e199]
+                    - button "显示不可见字符" [ref=e200]
+                    - button "帮助" [ref=e201]
+            - iframe [active] [ref=e204]:
+              - generic [active] [ref=f1e1]:
+                - paragraph
+          - generic [ref=e205]:
+            - generic [ref=e206]:
+              - group "Element Path" [ref=e207]:
+                - button "p" [ref=e208]
+                - generic [aria-hidden] [ref=e209]: ›
+                - button "img" [ref=e210]
+              - generic [ref=e211]:
+                - button "0 字" [ref=e212]
+                - link "使用 TinyMCE 构建" [ref=e214]:
+                  - /url: https://www.tiny.cloud/powered-by-tiny?utm_campaign=poweredby&utm_source=tiny&utm_medium=referral&utm_content=v7
+                  - text: 使用 构建
+            - separator "按上下箭头键以调整编辑器大小。" [ref=e221]
+    - contentinfo [ref=e225]:
+      - generic [ref=e226]: 编辑器已就绪
+      - generic [ref=e228]: 最近保存 11:33
+  - toolbar [ref=e231]:
+    - group [ref=e232]:
+      - button "插入/编辑图片" [pressed] [ref=e233]
+    - group [ref=e234]:
+      - button "左对齐" [ref=e235]
+      - button "居中对齐" [ref=e236]
+      - button "右对齐" [ref=e237]
+    - group [ref=e238]:
+      - button "填充满" [ref=e239]
+      - button "裁剪图片" [ref=e240]
+      - button "设为背景" [ref=e241]
+      - button "图片设置" [ref=e242]
+    - group [ref=e243]:
+      - button "切换位置：居右 / 居下" [ref=e244]
+      - button "图层设置" [ref=e245]
+```

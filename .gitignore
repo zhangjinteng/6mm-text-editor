@@ -3,7 +3,6 @@ node_modules/
 .env.*
 !.env.example
 .data/
-test-results/
 dist/
 .tools/
 screenshots/
@@ -14,4 +13,3 @@ playwright-report/
 .DS_Store
 .idea/
 .gatebase-tree.identity
-test-results-*/

@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  // Keep archived runs intact when Playwright clears its output directory.
+  outputDir: './test-results/latest',
   timeout: 90000,
   expect: { timeout: 20000 },
   workers: 1,
